@@ -1,98 +1,127 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import React from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { currentUser, jobs } from '@/constants/mock-data';
+import { useRouter } from 'expo-router';
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const router = useRouter();
+  const recommendedJobs = jobs.slice(0, 3);
+  const categories = ['Full-Time', 'Remote', 'Web Developer', 'Internship'];
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  return (
+    <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
+        
+        {/* Header */}
+        <View className="flex-row justify-between items-center px-6 pt-4 pb-6">
+          <View className="flex-row items-center">
+            <View className="w-12 h-12 rounded-full overflow-hidden mr-3 bg-muted">
+               <Text className="text-xl font-bold text-muted-foreground w-full h-full text-center mt-2.5">
+                  {currentUser.fullName.split(' ').map(n=>n[0]).join('')}
+               </Text>
+            </View>
+            <View>
+              <Text className="text-[13px] text-muted-foreground font-medium mb-0.5">Good Afternoon</Text>
+              <Text className="text-base font-bold text-foreground">{currentUser.fullName}</Text>
+            </View>
+          </View>
+          <TouchableOpacity className="w-11 h-11 rounded-full bg-white shadow-sm items-center justify-center relative">
+            <Ionicons name="notifications" size={20} color="#0f172a" />
+            <View className="absolute top-2.5 right-3 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Hero Section */}
+        <View className="flex-row justify-between items-center px-6 mb-6">
+          <Text className="text-[34px] leading-[42px] tracking-tight text-foreground">
+            Let's Find{'\n'}
+            <Text className="font-bold">Your Next Job</Text>
+          </Text>
+          <TouchableOpacity className="w-16 h-16 rounded-full bg-primary items-center justify-center shadow-md shadow-primary/30 mr-2">
+            <Ionicons name="search" size={28} color="#ffffff" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Categories */}
+        <View className="mb-8">
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 24, gap: 12 }}>
+            {categories.map((category, index) => (
+              <TouchableOpacity key={category} className={`px-6 py-3 rounded-full shadow-sm ${index === 0 ? 'bg-white' : 'bg-white'}`}>
+                <Text className="text-sm font-semibold text-foreground">{category}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* Recommended Jobs */}
+        <View className="px-6">
+          <Text className="text-xl font-bold text-foreground mb-6">Recommendation For you</Text>
+          
+          <View className="gap-6">
+            {recommendedJobs.map((job, idx) => (
+              <TouchableOpacity key={job.id} onPress={() => router.push(`/job/${job.id}` as any)} activeOpacity={0.9}>
+                <View className="p-5 rounded-[32px] bg-white shadow-sm border border-slate-100">
+                  
+                  {/* Card Header */}
+                  <View className="flex-row justify-between items-start mb-5">
+                    <View className="flex-row items-center flex-1">
+                      <View className={`w-14 h-14 rounded-full items-center justify-center mr-4 ${idx === 0 ? 'bg-primary' : 'bg-amber-300'}`}>
+                         <Text className={`text-xl font-bold ${idx === 0 ? 'text-white' : 'text-slate-900'}`}>{job.companyName.substring(0,1)}</Text>
+                      </View>
+                      <View className="flex-1">
+                        <Text className="text-[17px] font-bold text-foreground mb-1" numberOfLines={1}>{job.title}</Text>
+                        <View className="flex-row items-center">
+                          <Ionicons name="location-outline" size={14} color="#94a3b8" />
+                          <Text className="text-[13px] text-muted-foreground ml-1">{job.location}</Text>
+                        </View>
+                      </View>
+                    </View>
+                    <TouchableOpacity className="w-10 h-10 rounded-full bg-slate-100 items-center justify-center ml-2 text-foreground">
+                      <Ionicons name="bookmark" size={18} color="#0f172a" />
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Tags */}
+                  <View className="flex-row gap-2 mb-6">
+                    <View className="px-4 py-2 rounded-full bg-slate-100">
+                       <Text className="text-xs font-semibold text-muted-foreground">Full-Time</Text>
+                    </View>
+                    <View className="px-4 py-2 rounded-full bg-slate-100">
+                       <Text className="text-xs font-semibold text-muted-foreground">Remote</Text>
+                    </View>
+                    <View className="px-4 py-2 rounded-full bg-slate-100">
+                       <Text className="text-xs font-semibold text-muted-foreground">Internship</Text>
+                    </View>
+                  </View>
+                  
+                  {/* Card Footer */}
+                  <View className="flex-row justify-between items-center">
+                    <View className="flex-row items-center">
+                       {/* Mock Avatars */}
+                       <View className="flex-row">
+                         <View className="w-8 h-8 rounded-full bg-slate-200 border-2 border-white z-30 overflow-hidden items-center justify-center"><Text className="text-[10px] font-bold">JD</Text></View>
+                         <View className="w-8 h-8 rounded-full bg-slate-300 border-2 border-white -ml-3 z-20 overflow-hidden items-center justify-center"><Text className="text-[10px] font-bold">AS</Text></View>
+                         <View className="w-8 h-8 rounded-full bg-slate-800 border-2 border-white -ml-3 z-10 items-center justify-center">
+                            <Ionicons name="add" size={14} color="#fff" />
+                         </View>
+                       </View>
+                       <Text className="text-xs font-medium text-muted-foreground ml-2">388 Applicants</Text>
+                    </View>
+                    <View className="items-end">
+                      <Text className="text-lg font-bold text-foreground whitespace-nowrap">{job.salaryRange.split('/')[0]}</Text>
+                      <Text className="text-[11px] font-medium text-muted-foreground text-right relative top-[-2px]">month</Text>
+                    </View>
+                  </View>
+                  
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+      </ScrollView>
+    </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
-});
