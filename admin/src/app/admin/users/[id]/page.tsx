@@ -39,7 +39,7 @@ export default function UserDetailPage() {
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 rounded-full bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center text-white text-xl font-bold">
-                {user.fullName.split(" ").map((n) => n[0]).join("")}
+                {user.fullName.split(" ").map((n: string) => n[0]).join("")}
               </div>
               <div>
                 <h2 className="text-xl font-bold text-slate-900">{user.fullName}</h2>

@@ -105,7 +105,7 @@ export default function ApplicationsPage() {
                 <TableCell>
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-sm font-bold text-slate-600 shrink-0">
-                      {app.userName.split(" ").map((n) => n[0]).join("")}
+                      {app.userName.split(" ").map((n: string) => n[0]).join("")}
                     </div>
                     <div>
                       <p className="font-semibold text-slate-900 text-sm">{app.userName}</p>

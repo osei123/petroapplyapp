@@ -40,7 +40,7 @@ export default function ApplicationDetailPage() {
           <div className="flex items-start justify-between flex-wrap gap-4">
             <div className="flex items-center gap-4">
               <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center text-lg font-bold text-slate-600">
-                {app.userName.split(" ").map((n) => n[0]).join("")}
+                {app.userName.split(" ").map((n: string) => n[0]).join("")}
               </div>
               <div>
                 <h2 className="text-xl font-bold text-slate-900">{app.userName}</h2>

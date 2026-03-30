@@ -118,7 +118,7 @@ export default function JobDetailPage() {
                 <div key={app.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-50">
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center text-sm font-bold text-slate-600">
-                      {app.userName.split(" ").map((n) => n[0]).join("")}
+                      {app.userName.split(" ").map((n: string) => n[0]).join("")}
                     </div>
                     <div>
                       <p className="font-semibold text-sm text-slate-900">{app.userName}</p>
