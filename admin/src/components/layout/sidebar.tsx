@@ -25,6 +25,7 @@ const navItems = [
   { label: "Jobs", href: "/admin/jobs", icon: Briefcase },
   { label: "Users", href: "/admin/users", icon: Users },
   { label: "Applications", href: "/admin/applications", icon: FileText },
+  { label: "Content Orders", href: "/admin/content-orders", icon: ClipboardList },
   { label: "Settings", href: "/admin/settings", icon: Settings },
   { label: "Activity Logs", href: "/admin/activity-logs", icon: Activity },
 ];
