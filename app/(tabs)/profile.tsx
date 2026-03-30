@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 
 const menuItems = [
   { label: 'Edit Profile', icon: 'person.fill' as const, route: '/edit-profile' },
+  { label: 'Documents', icon: 'doc.text.fill' as const, route: '/documents' },
   { label: 'Notifications', icon: 'bell.fill' as const, route: '/notifications' },
   { label: 'Settings', icon: 'gear' as const, route: '/settings' },
 ];

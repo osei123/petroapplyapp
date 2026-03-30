@@ -2,7 +2,7 @@ import fs from 'fs';
 import { companies, jobs, applications } from '../src/lib/mock-data';
 
 // Helper to generate a deterministic pseudo-UUID based on a string salt
-function stringToUuid(str) {
+function stringToUuid(str: string) {
   // Simple hash for deterministic UUID mapping from "c1", "j1"
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
@@ -12,10 +12,10 @@ function stringToUuid(str) {
   return `00000000-0000-0000-0000-${hex}`;
 }
 
-const companyIdMap = {};
-const jobIdMap = {};
+const companyIdMap: Record<string, string> = {};
+const jobIdMap: Record<string, string> = {};
 
-function escapeSql(str) {
+function escapeSql(str: any) {
   if (str === null || str === undefined || str === '') return 'NULL';
   if (typeof str === 'boolean') return str ? 'TRUE' : 'FALSE';
   if (Array.isArray(str)) {

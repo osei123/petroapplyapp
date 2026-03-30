@@ -97,36 +97,66 @@ export default function JobDetailScreen() {
       return;
     }
 
-    Alert.alert(
-      'Apply for this job?',
-      `Submit your application to ${job?.companies?.name || 'this company'}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Apply',
-          onPress: async () => {
-            setApplying(true);
-            try {
-              const { error } = await supabase
-                .from('applications')
-                .insert({
-                  user_id: user.id,
-                  job_id: id,
-                  status: 'submitted',
-                });
+    setApplying(true);
+    try {
+      // Fetch user's documents
+      const { data: docs, error: docError } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
 
-              if (error) throw error;
-              setHasApplied(true);
-              Alert.alert('Success!', 'Your application has been submitted successfully.');
-            } catch (err: any) {
-              Alert.alert('Error', err.message || 'Failed to submit application.');
-            } finally {
-              setApplying(false);
+      if (docError) throw docError;
+
+      if (!docs || docs.length === 0) {
+        setApplying(false);
+        Alert.alert(
+          'No Resume Found',
+          'You need to upload a resume to apply for jobs. Please go to Profile > Documents to upload one.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Go to Profile', onPress: () => router.push('/profile' as any) }
+          ]
+        );
+        return;
+      }
+
+      const latestResume = docs[0];
+
+      Alert.alert(
+        'Apply for this job?',
+        `Submit application to ${job?.companies?.name || 'this company'} using resume:\n"${latestResume.filename}"?`,
+        [
+          { text: 'Cancel', style: 'cancel', onPress: () => setApplying(false) },
+          {
+            text: 'Apply',
+            onPress: async () => {
+              try {
+                const { error } = await supabase
+                  .from('applications')
+                  .insert({
+                    user_id: user.id,
+                    job_id: id,
+                    status: 'submitted',
+                    resume_url: latestResume.file_url,
+                  });
+
+                if (error) throw error;
+                setHasApplied(true);
+                Alert.alert('Success!', 'Your application has been submitted successfully.');
+              } catch (err: any) {
+                Alert.alert('Error', err.message || 'Failed to submit application.');
+              } finally {
+                setApplying(false);
+              }
             }
           }
-        }
-      ]
-    );
+        ]
+      );
+    } catch (err: any) {
+      setApplying(false);
+      Alert.alert('Error', 'Failed to fetch your resumes.');
+    }
   };
 
   if (loading) {
