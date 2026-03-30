@@ -71,14 +71,13 @@ export default function DocumentsScreen() {
 
       if (uploadError) throw uploadError;
 
-      // Get Public URL
-      const { data: urlData } = supabase.storage.from('resumes').getPublicUrl(filePath);
+      if (uploadError) throw uploadError;
 
-      // Save to database
+      // Save the relative path to the database instead of a dead public URL
       const { error: dbError } = await supabase.from('documents').insert({
         user_id: user.id,
         filename: file.name,
-        file_url: urlData.publicUrl,
+        file_url: filePath,
         type: 'resume',
       });
 
@@ -102,8 +101,8 @@ export default function DocumentsScreen() {
         style: 'destructive',
         onPress: async () => {
           try {
-            // Extact path from URL roughly
-            const filePath = fileUrl.split('/resumes/')[1];
+            // The file_url now directly stores the filePath
+            const filePath = fileUrl.includes('/resumes/') ? fileUrl.split('/resumes/')[1] : fileUrl;
             if (filePath) {
               await supabase.storage.from('resumes').remove([filePath]);
             }
