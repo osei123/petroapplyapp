@@ -30,14 +30,15 @@ export default function DashboardPage() {
     async function fetchStats() {
       setLoading(true);
       try {
-        const [compRes, jobRes, appRes] = await Promise.all([
+        const [compRes, jobRes, appRes, usrRes] = await Promise.all([
           supabase.from("companies").select("*", { count: "exact", head: true }),
           supabase.from("jobs").select("*", { count: "exact", head: true }),
           supabase.from("applications").select("*", { count: "exact", head: true }),
+          supabase.from("user_profiles").select("*", { count: "exact", head: true }),
         ]);
 
         setStats({
-          totalUsers: 1,
+          totalUsers: usrRes.count || 0,
           totalCompanies: compRes.count || 0,
           totalJobs: jobRes.count || 0,
           totalApplications: appRes.count || 0,
