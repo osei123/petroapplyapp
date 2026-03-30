@@ -1,105 +1,182 @@
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { applications, jobs } from '@/constants/mock-data';
+import { Colors, Spacing, BorderRadius, FontSize } from '@/constants/theme';
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { supabase } from '@/lib/supabase';
+
+const statusColors: Record<string, { bg: string; text: string }> = {
+  submitted: { bg: Colors.light.surfaceHover, text: Colors.light.textSecondary },
+  under_review: { bg: Colors.light.primaryLight, text: Colors.light.primaryDark },
+  shortlisted: { bg: Colors.light.warningLight, text: '#92400e' },
+  interview: { bg: '#e0e7ff', text: '#3730a3' },
+  rejected: { bg: Colors.light.errorLight, text: '#991b1b' },
+  hired: { bg: Colors.light.successLight, text: '#065f46' },
+};
+
+const statusSteps = ['Submitted', 'Under Review', 'Shortlisted', 'Interview', 'Hired'];
+const statusKeys = ['submitted', 'under_review', 'shortlisted', 'interview', 'hired'];
 
 export default function ApplicationDetailScreen() {
-  const { id } = useLocalSearchParams();
+  const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  
-  const app = applications.find(a => a.id === id) || applications[0];
-  const job = jobs.find(j => j.id === app.jobId);
+  const [app, setApp] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  const steps = [
-    { key: 'submitted', label: 'Application Submitted', date: app.appliedAt, done: true },
-    { key: 'under_review', label: 'Under Review', date: app.status === 'under_review' || ['shortlisted','interview','hired'].includes(app.status) ? app.appliedAt : null, done: ['under_review','shortlisted','interview','hired'].includes(app.status) },
-    { key: 'shortlisted', label: 'Shortlisted', date: ['shortlisted','interview','hired'].includes(app.status) ? app.updatedAt : null, done: ['shortlisted','interview','hired'].includes(app.status) },
-    { key: 'interview', label: 'Interview', date: ['interview','hired'].includes(app.status) ? app.updatedAt : null, done: ['interview','hired'].includes(app.status) },
-    { key: 'decision', label: 'Final Decision', date: ['hired','rejected'].includes(app.status) ? app.updatedAt : null, done: ['hired','rejected'].includes(app.status) }
-  ];
+  useEffect(() => {
+    const fetchApplication = async () => {
+      const { data, error } = await supabase
+        .from('applications')
+        .select(`
+          id,
+          status,
+          applied_at,
+          job_id,
+          jobs (
+            id,
+            title,
+            companies (
+              id,
+              name
+            )
+          )
+        `)
+        .eq('id', id)
+        .single();
 
+      if (!error && data) setApp(data);
+      setLoading(false);
+    };
+    fetchApplication();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={Colors.light.primary} />
+      </SafeAreaView>
+    );
+  }
+
+  if (!app) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Text style={{ padding: 20 }}>Application not found</Text>
+      </SafeAreaView>
+    );
+  }
+
+  const jobTitle = app.jobs?.title || 'Unknown Job';
+  const companyName = app.jobs?.companies?.name || 'Unknown Company';
+  const appliedDate = new Date(app.applied_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+  const statusStyle = statusColors[app.status] || statusColors.submitted;
+  const currentStepIdx = statusKeys.indexOf(app.status);
   const isRejected = app.status === 'rejected';
 
   return (
-    <SafeAreaView className="flex-1 bg-muted" edges={['top']}>
-      <View className="flex-row items-center justify-between px-6 py-4 bg-white border-b border-border">
-        <TouchableOpacity onPress={() => router.back()} className="p-2 -ml-2">
-          <Ionicons name="arrow-back" size={24} color="#171717" />
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <View style={styles.navBar}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+          <IconSymbol name="arrow.left" size={20} color={Colors.light.text} />
         </TouchableOpacity>
-        <Text className="text-lg font-semibold text-foreground">Application Status</Text>
-        <View className="w-10" />
+        <Text style={styles.navTitle}>Application</Text>
+        <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 60, paddingTop: 24 }}>
-        {/* Job Snippet */}
-        <View className="bg-white p-6 rounded-3xl shadow-sm mb-8">
-          <View className="flex-row justify-between items-center mb-4">
-            <View className="w-12 h-12 rounded-xl bg-muted items-center justify-center">
-              <Text className="text-base font-bold text-muted-foreground">{app.companyName.substring(0,2)}</Text>
-            </View>
-            <TouchableOpacity onPress={() => router.push(`/job/${app.jobId}` as any)}>
-              <Text className="text-sm font-semibold text-primary">View Job</Text>
-            </TouchableOpacity>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+        {/* Header */}
+        <View style={styles.headerCard}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{companyName.substring(0, 2).toUpperCase()}</Text>
           </View>
-          <Text className="text-lg font-bold text-foreground mb-1">{app.jobTitle}</Text>
-          <Text className="text-[15px] text-muted-foreground">{app.companyName}</Text>
+          <Text style={styles.jobTitle}>{jobTitle}</Text>
+          <Text style={styles.companyName}>{companyName}</Text>
+          <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
+            <Text style={[styles.statusText, { color: statusStyle.text }]}>
+              {app.status.replace('_', ' ')}
+            </Text>
+          </View>
+          <Text style={styles.appliedDate}>Applied {appliedDate}</Text>
         </View>
 
-        {/* Timeline */}
-        <View className="mb-8">
-          <Text className="text-lg font-bold text-foreground mb-4">Progress</Text>
-          <View className="bg-white p-6 rounded-3xl shadow-sm">
-            {steps.map((step, index) => {
-              const isLast = index === steps.length - 1;
-              let indicatorColor = "#e2e8f0"; // border color
-              let iconName = 'ellipse-outline';
-              
-              if (step.done) {
-                indicatorColor = "#0ea5e9"; // primary color
-                iconName = 'checkmark-circle';
-              }
-              if (isLast && isRejected) {
-                indicatorColor = "#e11d48"; // danger color
-                iconName = 'close-circle';
-              }
-
-              return (
-                <View key={step.key} className="flex-row items-start">
-                  <View className="items-center w-5">
-                    <Ionicons name={iconName as any} size={20} color={indicatorColor} />
-                    {!isLast && <View className={`w-0.5 h-[30px] my-1 ${step.done ? 'bg-primary' : 'bg-muted'}`} />}
-                  </View>
-                  <View className="flex-1 ml-4 pb-6">
-                    <Text className={`text-[15px] font-semibold mb-0.5 ${step.done || (isLast && isRejected) ? 'text-foreground' : 'text-muted-foreground'}`}>
-                      {isLast && isRejected ? 'Application Rejected' : step.label}
-                    </Text>
-                    {step.date && <Text className="text-[13px] text-muted-foreground">{step.date}</Text>}
-                  </View>
+        {/* Progress Timeline */}
+        <View style={styles.timelineCard}>
+          <Text style={styles.timelineTitle}>Application Progress</Text>
+          {statusSteps.map((step, i) => {
+            const isComplete = !isRejected && i <= currentStepIdx;
+            const isCurrent = !isRejected && i === currentStepIdx;
+            return (
+              <View key={step} style={styles.timelineItem}>
+                <View style={styles.timelineDotContainer}>
+                  <View style={[styles.timelineDot,
+                    isComplete && { backgroundColor: Colors.light.primary },
+                    isRejected && { backgroundColor: Colors.light.error },
+                    isCurrent && { borderWidth: 3, borderColor: Colors.light.primary + '40' },
+                  ]} />
+                  {i < statusSteps.length - 1 && (
+                    <View style={[styles.timelineLine,
+                      isComplete && i < currentStepIdx && { backgroundColor: Colors.light.primary },
+                    ]} />
+                  )}
                 </View>
-              );
-            })}
-          </View>
-        </View>
-
-        {/* Applied Materials */}
-        <View className="mb-8">
-          <Text className="text-lg font-bold text-foreground mb-4">Submitted Materials</Text>
-          <View className="bg-white p-6 rounded-3xl shadow-sm bg-y">
-            <View className="flex-row items-center">
-              <View className="w-11 h-11 rounded-xl bg-[#0ea5e9]/10 items-center justify-center mr-4">
-                <Ionicons name="document-text" size={20} color="#0ea5e9" />
+                <View style={styles.timelineContent}>
+                  <Text style={[styles.timelineStep,
+                    isComplete && { color: Colors.light.text, fontWeight: '700' },
+                    isRejected && { color: Colors.light.error },
+                  ]}>{step}</Text>
+                  {isCurrent && <Text style={styles.timelineCurrent}>Current stage</Text>}
+                </View>
               </View>
-              <View className="flex-1">
-                <Text className="text-[15px] font-semibold text-foreground mb-0.5">Sarah_Chen_Resume.pdf</Text>
-                <Text className="text-xs text-muted-foreground">Uploaded Mar 15, 2025</Text>
-              </View>
+            );
+          })}
+          {isRejected && (
+            <View style={styles.rejectedNote}>
+              <Text style={styles.rejectedText}>Unfortunately, your application was not selected. Don't give up — keep applying!</Text>
             </View>
-          </View>
+          )}
         </View>
 
+        {/* Actions */}
+        <View style={styles.actionsCard}>
+          <TouchableOpacity style={styles.actionItem} onPress={() => router.push(`/job/${app.job_id}` as any)}>
+            <IconSymbol name="briefcase.fill" size={20} color={Colors.light.primary} />
+            <Text style={styles.actionText}>View Job Details</Text>
+            <IconSymbol name="chevron.right" size={16} color={Colors.light.textTertiary} />
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: Colors.light.background },
+  navBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md },
+  backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: Colors.light.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.light.border },
+  navTitle: { fontSize: FontSize.lg, fontWeight: '700', color: Colors.light.text },
+  content: { paddingHorizontal: Spacing.xl, paddingBottom: 30 },
+  headerCard: { alignItems: 'center', backgroundColor: Colors.light.surface, borderRadius: BorderRadius.xxl, padding: Spacing.xxl, borderWidth: 1, borderColor: Colors.light.border },
+  avatar: { width: 56, height: 56, borderRadius: BorderRadius.xl, backgroundColor: Colors.light.surfaceHover, alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.md },
+  avatarText: { fontSize: FontSize.lg, fontWeight: '700', color: Colors.light.textSecondary },
+  jobTitle: { fontSize: FontSize.xl, fontWeight: '800', color: Colors.light.text, textAlign: 'center' },
+  companyName: { fontSize: FontSize.md, color: Colors.light.textSecondary, marginTop: 4 },
+  statusBadge: { paddingHorizontal: 16, paddingVertical: 6, borderRadius: BorderRadius.full, marginTop: Spacing.md },
+  statusText: { fontSize: FontSize.sm, fontWeight: '700', textTransform: 'capitalize' },
+  appliedDate: { fontSize: FontSize.sm, color: Colors.light.textTertiary, marginTop: Spacing.sm },
+  timelineCard: { backgroundColor: Colors.light.surface, borderRadius: BorderRadius.xxl, padding: Spacing.xxl, marginTop: Spacing.lg, borderWidth: 1, borderColor: Colors.light.border },
+  timelineTitle: { fontSize: FontSize.lg, fontWeight: '700', color: Colors.light.text, marginBottom: Spacing.lg },
+  timelineItem: { flexDirection: 'row', gap: Spacing.md },
+  timelineDotContainer: { alignItems: 'center', width: 20 },
+  timelineDot: { width: 14, height: 14, borderRadius: 7, backgroundColor: Colors.light.border },
+  timelineLine: { width: 2, height: 32, backgroundColor: Colors.light.border, marginVertical: 4 },
+  timelineContent: { flex: 1, paddingBottom: Spacing.lg },
+  timelineStep: { fontSize: FontSize.md, color: Colors.light.textTertiary },
+  timelineCurrent: { fontSize: FontSize.xs, color: Colors.light.primary, fontWeight: '600', marginTop: 2 },
+  rejectedNote: { marginTop: Spacing.md, backgroundColor: Colors.light.errorLight, borderRadius: BorderRadius.lg, padding: Spacing.md },
+  rejectedText: { fontSize: FontSize.sm, color: '#991b1b', lineHeight: 20 },
+  actionsCard: { backgroundColor: Colors.light.surface, borderRadius: BorderRadius.xl, marginTop: Spacing.lg, borderWidth: 1, borderColor: Colors.light.border, overflow: 'hidden' },
+  actionItem: { flexDirection: 'row', alignItems: 'center', padding: Spacing.lg, gap: Spacing.md },
+  actionText: { flex: 1, fontSize: FontSize.md, fontWeight: '600', color: Colors.light.text },
+});

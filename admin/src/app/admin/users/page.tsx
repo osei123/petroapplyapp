@@ -1,24 +1,49 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { Search, Eye } from "lucide-react";
+import { Search, Eye, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
-import { users } from "@/lib/mock-data";
+import { supabase } from "@/lib/supabase/client";
 
 export default function UsersPage() {
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
 
+  useEffect(() => {
+    async function fetchUsers() {
+      try {
+        const { data, error } = await supabase
+          .from("user_profiles")
+          .select(`*, applications(count)`)
+          .order("created_at", { ascending: false });
+
+        if (data) setUsers(data);
+      } catch (err) {
+        console.error("Failed to fetch users:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchUsers();
+  }, []);
+
   const filtered = users.filter((u) => {
-    const matchesSearch = u.fullName.toLowerCase().includes(search.toLowerCase()) ||
-      u.email.toLowerCase().includes(search.toLowerCase()) ||
-      u.university.toLowerCase().includes(search.toLowerCase());
-    const matchesRole = roleFilter === "all" || u.role === roleFilter;
+    const fullName = u.full_name || "";
+    const email = u.email || "";
+    const university = u.university || "";
+    const role = u.role || "student";
+
+    const matchesSearch = fullName.toLowerCase().includes(search.toLowerCase()) ||
+      email.toLowerCase().includes(search.toLowerCase()) ||
+      university.toLowerCase().includes(search.toLowerCase());
+    const matchesRole = roleFilter === "all" || role === roleFilter;
     return matchesSearch && matchesRole;
   });
 
@@ -64,50 +89,66 @@ export default function UsersPage() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {filtered.length === 0 ? (
+          {loading ? (
+            <TableRow>
+              <TableCell colSpan={8} className="h-32 text-center">
+                <div className="flex justify-center items-center">
+                  <Loader2 className="h-6 w-6 animate-spin text-sky-500" />
+                </div>
+              </TableCell>
+            </TableRow>
+          ) : filtered.length === 0 ? (
             <TableRow><TableCell colSpan={8} className="text-center py-12 text-slate-400">No users found.</TableCell></TableRow>
           ) : (
-            filtered.map((user) => (
-              <TableRow key={user.id}>
-                <TableCell>
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-sky-400 to-blue-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
-                      {user.fullName.split(" ").map((n) => n[0]).join("")}
+            filtered.map((user) => {
+              const fullName = user.full_name || "Unknown";
+              const initials = fullName.split(" ").map((n: string) => n[0]).join("") || "U";
+              const applicationsCount = user.applications?.[0]?.count || 0;
+              const role = user.role || "student";
+              const status = "active"; // Defaults to active since DB doesn't track status directly yet
+
+              return (
+                <TableRow key={user.id}>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-sky-400 to-blue-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
+                        {initials}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-slate-900 text-sm">{fullName}</p>
+                        <p className="text-xs text-slate-500">{user.email}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-semibold text-slate-900 text-sm">{user.fullName}</p>
-                      <p className="text-xs text-slate-500">{user.email}</p>
+                  </TableCell>
+                  <TableCell className="text-slate-600 text-sm">{user.university || "N/A"}</TableCell>
+                  <TableCell className="text-slate-600 text-sm">{user.country || "N/A"}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <div className="w-16 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                        <div className="h-full rounded-full bg-sky-500" style={{ width: `${user.profile_completion || 0}%` }} />
+                      </div>
+                      <span className="text-xs text-slate-500">{user.profile_completion || 0}%</span>
                     </div>
-                  </div>
-                </TableCell>
-                <TableCell className="text-slate-600 text-sm">{user.university}</TableCell>
-                <TableCell className="text-slate-600 text-sm">{user.country}</TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <div className="w-16 h-1.5 rounded-full bg-slate-100 overflow-hidden">
-                      <div className="h-full rounded-full bg-sky-500" style={{ width: `${user.profileCompletion}%` }} />
-                    </div>
-                    <span className="text-xs text-slate-500">{user.profileCompletion}%</span>
-                  </div>
-                </TableCell>
-                <TableCell className="text-slate-600 text-sm">{user.applicationsCount}</TableCell>
-                <TableCell>
-                  <Badge variant={user.role === "super_admin" ? "default" : user.role === "admin" ? "outline" : "secondary"} className="capitalize text-xs">
-                    {user.role.replace("_", " ")}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <Badge variant={user.status === "active" ? "success" : user.status === "suspended" ? "destructive" : "warning"} className="capitalize">
-                    {user.status}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  <Link href={`/admin/users/${user.id}`}>
-                    <Button variant="ghost" size="icon" className="h-8 w-8"><Eye size={14} /></Button>
-                  </Link>
-                </TableCell>
-              </TableRow>
-            ))
+                  </TableCell>
+                  <TableCell className="text-slate-600 text-sm">{applicationsCount}</TableCell>
+                  <TableCell>
+                    <Badge variant={role === "super_admin" ? "default" : role === "admin" ? "outline" : "secondary"} className="capitalize text-xs">
+                      {role.replace("_", " ")}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={status === "active" ? "success" : status === "suspended" ? "destructive" : "warning"} className="capitalize">
+                      {status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Link href={`/admin/users/${user.id}`}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8"><Eye size={14} /></Button>
+                    </Link>
+                  </TableCell>
+                </TableRow>
+              );
+            })
           )}
         </TableBody>
       </Table>

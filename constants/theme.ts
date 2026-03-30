@@ -1,15 +1,18 @@
 import { Platform } from 'react-native';
 
+// PetroApply Design System
 export const Colors = {
   light: {
     text: '#0f172a',
     textSecondary: '#64748b',
-    textMuted: '#94a3b8',
+    textTertiary: '#94a3b8',
     background: '#f8fafc',
     surface: '#ffffff',
-    tint: '#0ea5e9',
+    surfaceHover: '#f1f5f9',
     primary: '#0ea5e9',
+    primaryDark: '#0284c7',
     primaryLight: '#e0f2fe',
+    tint: '#0ea5e9',
     icon: '#64748b',
     tabIconDefault: '#94a3b8',
     tabIconSelected: '#0ea5e9',
@@ -19,19 +22,21 @@ export const Colors = {
     successLight: '#d1fae5',
     warning: '#f59e0b',
     warningLight: '#fef3c7',
-    danger: '#ef4444',
-    dangerLight: '#fee2e2',
-    card: '#ffffff',
+    error: '#ef4444',
+    errorLight: '#fee2e2',
+    cardShadow: 'rgba(0, 0, 0, 0.04)',
   },
   dark: {
-    text: '#f1f5f9',
+    text: '#f8fafc',
     textSecondary: '#94a3b8',
-    textMuted: '#64748b',
+    textTertiary: '#64748b',
     background: '#0f172a',
     surface: '#1e293b',
-    tint: '#38bdf8',
+    surfaceHover: '#334155',
     primary: '#38bdf8',
+    primaryDark: '#0ea5e9',
     primaryLight: '#0c4a6e',
+    tint: '#38bdf8',
     icon: '#94a3b8',
     tabIconDefault: '#64748b',
     tabIconSelected: '#38bdf8',
@@ -41,9 +46,9 @@ export const Colors = {
     successLight: '#064e3b',
     warning: '#fbbf24',
     warningLight: '#78350f',
-    danger: '#f87171',
-    dangerLight: '#7f1d1d',
-    card: '#1e293b',
+    error: '#f87171',
+    errorLight: '#7f1d1d',
+    cardShadow: 'rgba(0, 0, 0, 0.2)',
   },
 };
 
@@ -66,15 +71,33 @@ export const BorderRadius = {
   full: 9999,
 };
 
+export const FontSize = {
+  xs: 11,
+  sm: 13,
+  md: 15,
+  lg: 17,
+  xl: 20,
+  xxl: 24,
+  xxxl: 32,
+};
+
 export const Fonts = Platform.select({
   ios: {
-    sans: 'System',
-    serif: 'Georgia',
-    mono: 'Menlo',
+    sans: 'system-ui',
+    serif: 'ui-serif',
+    rounded: 'ui-rounded',
+    mono: 'ui-monospace',
   },
   default: {
     sans: 'normal',
     serif: 'serif',
+    rounded: 'normal',
     mono: 'monospace',
+  },
+  web: {
+    sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+    serif: "Georgia, 'Times New Roman', serif",
+    rounded: "'SF Pro Rounded', sans-serif",
+    mono: "SFMono-Regular, Menlo, monospace",
   },
 });

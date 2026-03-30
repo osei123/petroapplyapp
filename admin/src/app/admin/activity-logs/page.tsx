@@ -1,10 +1,10 @@
 "use client";
 
-import React from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState, useEffect } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { activityLogs } from "@/lib/mock-data";
-import { Building2, Briefcase, Users, FileText, Settings, ClipboardList } from "lucide-react";
+import { Building2, Briefcase, Users, FileText, Settings, ClipboardList, Loader2 } from "lucide-react";
+import { supabase } from "@/lib/supabase/client";
 
 const entityIcons: Record<string, React.ElementType> = {
   company: Building2,
@@ -25,6 +25,30 @@ const entityColors: Record<string, string> = {
 };
 
 export default function ActivityLogsPage() {
+  const [logs, setLogs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchLogs() {
+      try {
+        const { data, error } = await supabase
+          .from("activity_logs")
+          .select(`*, user_profiles(full_name)`)
+          .order("created_at", { ascending: false });
+
+        if (data) {
+          setLogs(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch activity logs", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchLogs();
+  }, []);
+
   return (
     <div className="space-y-6">
       <div>
@@ -34,41 +58,56 @@ export default function ActivityLogsPage() {
 
       <Card>
         <CardContent className="p-0">
-          <div className="divide-y divide-slate-50">
-            {activityLogs.map((log) => {
-              const Icon = entityIcons[log.entityType] || FileText;
-              const color = entityColors[log.entityType] || "bg-slate-100 text-slate-600";
-              return (
-                <div key={log.id} className="flex items-start gap-4 p-5">
-                  <div className={`p-2.5 rounded-xl shrink-0 ${color}`}>
-                    <Icon size={16} />
+          {loading ? (
+            <div className="flex justify-center items-center py-20">
+              <Loader2 className="h-8 w-8 animate-spin text-sky-500" />
+            </div>
+          ) : logs.length === 0 ? (
+            <div className="text-center py-20">
+              <p className="text-slate-500">No activity logs found.</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-50">
+              {logs.map((log) => {
+                const entityType = log.entity_type || "user";
+                const Icon = entityIcons[entityType] || FileText;
+                const color = entityColors[entityType] || "bg-slate-100 text-slate-600";
+                const adminName = log.user_profiles?.full_name || "Unknown Admin";
+
+                return (
+                  <div key={log.id} className="flex items-start gap-4 p-5">
+                    <div className={`p-2.5 rounded-xl shrink-0 ${color}`}>
+                      <Icon size={16} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-slate-700">
+                        <span className="font-semibold">{adminName}</span>{" "}
+                        {log.action?.toLowerCase()}
+                      </p>
+                      {log.details && Object.keys(log.details).length > 0 && (
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          {JSON.stringify(log.details)}
+                        </p>
+                      )}
+                      <p className="text-xs text-slate-400 mt-1.5">
+                        {new Date(log.created_at).toLocaleDateString("en-US", {
+                          weekday: "short",
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                    </div>
+                    <Badge variant="secondary" className="capitalize text-xs shrink-0">
+                      {entityType.replace("_", " ")}
+                    </Badge>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-slate-700">
-                      <span className="font-semibold">{log.adminName}</span>{" "}
-                      {log.action.toLowerCase()}
-                    </p>
-                    {log.metadata && (
-                      <p className="text-xs text-slate-500 mt-0.5">{log.metadata}</p>
-                    )}
-                    <p className="text-xs text-slate-400 mt-1.5">
-                      {new Date(log.createdAt).toLocaleDateString("en-US", {
-                        weekday: "short",
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
-                  </div>
-                  <Badge variant="secondary" className="capitalize text-xs shrink-0">
-                    {log.entityType.replace("_", " ")}
-                  </Badge>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

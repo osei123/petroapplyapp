@@ -1,121 +1,180 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { applications } from '@/constants/mock-data';
+import { Colors, Spacing, BorderRadius, FontSize } from '@/constants/theme';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 
-const FILTERS = ['All', 'Active', 'Interview', 'Archived'];
+const statusColors: Record<string, { bg: string; text: string }> = {
+  submitted: { bg: Colors.light.surfaceHover, text: Colors.light.textSecondary },
+  under_review: { bg: Colors.light.primaryLight, text: Colors.light.primaryDark },
+  shortlisted: { bg: Colors.light.warningLight, text: '#92400e' },
+  interview: { bg: '#e0e7ff', text: '#3730a3' },
+  rejected: { bg: Colors.light.errorLight, text: '#991b1b' },
+  hired: { bg: Colors.light.successLight, text: '#065f46' },
+};
+
+const tabs = ['All', 'Active', 'Completed'];
 
 export default function ApplicationsScreen() {
-  const [activeFilter, setActiveFilter] = useState('All');
+  const router = useRouter();
+  const { user } = useAuth();
+  
+  const [activeTab, setActiveTab] = useState('All');
+  const [applications, setApplications] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const filteredApps = applications.filter(app => {
-    if (activeFilter === 'All') return true;
-    if (activeFilter === 'Active') return ['submitted', 'under_review', 'shortlisted'].includes(app.status);
-    if (activeFilter === 'Interview') return app.status === 'interview';
-    if (activeFilter === 'Archived') return ['rejected', 'hired'].includes(app.status);
-    return true;
+  const fetchApplications = async () => {
+    if (!user) return;
+    try {
+      const { data, error } = await supabase
+        .from('applications')
+        .select(`
+          id,
+          status,
+          applied_at,
+          jobs (
+            id,
+            title,
+            companies (
+              id,
+              name
+            )
+          )
+        `)
+        .eq('user_id', user.id)
+        .order('applied_at', { ascending: false });
+
+      if (error) throw error;
+      setApplications(data || []);
+    } catch (err) {
+      console.error('Error fetching applications:', err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchApplications();
+  }, [user]);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchApplications();
+  }, [user]);
+
+  const filtered = applications.filter((a) => {
+    if (activeTab === 'All') return true;
+    if (activeTab === 'Active') return ['submitted', 'under_review', 'shortlisted', 'interview'].includes(a.status);
+    return ['rejected', 'hired'].includes(a.status);
   });
 
-  const getStatusColorClass = (status: string) => {
-    switch(status) {
-      case 'submitted': return 'bg-muted text-muted-foreground';
-      case 'under_review': return 'bg-[#0ea5e9]/10 text-[#0ea5e9]';
-      case 'shortlisted': return 'bg-amber-100 text-amber-700';
-      case 'interview': return 'bg-primary text-white';
-      case 'hired': return 'bg-emerald-100 text-emerald-700';
-      case 'rejected': return 'bg-rose-100 text-rose-700';
-      default: return 'bg-muted text-muted-foreground';
-    }
-  };
-  
-  const getStatusIconColor = (status: string) => {
-    switch(status) {
-      case 'submitted': return '#64748b';
-      case 'under_review': return '#0ea5e9';
-      case 'shortlisted': return '#d97706';
-      case 'interview': return '#ffffff';
-      case 'hired': return '#059669';
-      case 'rejected': return '#e11d48';
-      default: return '#64748b';
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch(status) {
-      case 'submitted': return 'paper-plane';
-      case 'under_review': return 'eye';
-      case 'shortlisted': return 'star';
-      case 'interview': return 'chatbubbles';
-      case 'hired': return 'checkmark-circle';
-      case 'rejected': return 'close-circle';
-      default: return 'document-text';
-    }
-  };
-
   return (
-    <SafeAreaView className="flex-1 bg-muted" edges={['top']}>
-      <View className="px-6 pt-4 pb-2">
-        <Text className="text-[28px] font-bold text-foreground">My Applications</Text>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <View style={styles.header}>
+        <Text style={styles.title}>My Applications</Text>
+        <Text style={styles.subtitle}>{applications.length} total applications</Text>
       </View>
 
-      <View className="mb-6">
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 24, gap: 8 }}>
-          {FILTERS.map(filter => (
-            <TouchableOpacity 
-              key={filter} 
-              onPress={() => setActiveFilter(filter)}
-              className={`px-5 py-2.5 rounded-full shadow-sm ${activeFilter === filter ? 'bg-primary' : 'bg-white'}`}
-            >
-              <Text className={`text-sm font-semibold ${activeFilter === filter ? 'text-white' : 'text-muted-foreground'}`}>
-                {filter}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+      <View style={styles.tabBar}>
+        {tabs.map((tab) => (
+          <TouchableOpacity key={tab} onPress={() => setActiveTab(tab)}
+            style={[styles.tab, activeTab === tab && styles.tabActive]}>
+            <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>{tab}</Text>
+          </TouchableOpacity>
+        ))}
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 100, gap: 16 }}>
-        {filteredApps.map(app => {
-          return (
-            <View key={app.id} className="p-5 rounded-3xl bg-white shadow-sm">
-              <View className="flex-row justify-between items-start mb-4">
-                <View className="w-11 h-11 rounded-xl bg-muted items-center justify-center">
-                  <Text className="text-base font-bold text-muted-foreground">{app.companyName.substring(0,2)}</Text>
-                </View>
-                <View className={`flex-row items-center px-3 py-1.5 rounded-full gap-1.5 ${getStatusColorClass(app.status)}`}>
-                  <Ionicons name={getStatusIcon(app.status) as any} size={14} color={getStatusIconColor(app.status)} />
-                  <Text className={`text-xs font-semibold capitalize ${getStatusColorClass(app.status)} border-none bg-transparent`}>
-                    {app.status.replace('_', ' ')}
-                  </Text>
-                </View>
-              </View>
-
-              <Text className="text-lg font-bold text-foreground mb-1" numberOfLines={1}>{app.jobTitle}</Text>
-              <Text className="text-[15px] text-muted-foreground mb-4">{app.companyName}</Text>
-              
-              <View className="h-px bg-border my-2" />
-              
-              <View className="flex-row justify-between items-center mt-2">
-                <View className="flex-row items-center gap-1.5">
-                  <Ionicons name="calendar-outline" size={14} color="#94a3b8" />
-                  <Text className="text-[13px] font-medium text-muted-foreground">Applied {app.appliedAt}</Text>
-                </View>
-                <TouchableOpacity className="p-1">
-                  <Ionicons name="chevron-forward" size={20} color="#94a3b8" />
-                </TouchableOpacity>
-              </View>
-            </View>
-          );
-        })}
-
-        {filteredApps.length === 0 && (
-          <View className="p-8 items-center justify-center mt-10">
-            <Ionicons name="document-text-outline" size={48} color="#e2e8f0" />
-            <Text className="mt-4 text-[15px] text-center text-muted-foreground">No applications in this category.</Text>
+      <ScrollView 
+        showsVerticalScrollIndicator={false} 
+        contentContainerStyle={styles.list}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.light.primary} />}
+      >
+        {loading && !refreshing ? (
+          <View style={[styles.emptyState, { paddingTop: 60 }]}>
+            <ActivityIndicator size="large" color={Colors.light.primary} />
           </View>
+        ) : filtered.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyText}>No applications found.</Text>
+            {activeTab !== 'All' && <Text style={[styles.emptyText, { marginTop: 4, fontSize: FontSize.sm }]}>Try changing your filter.</Text>}
+          </View>
+        ) : (
+          filtered.map((app) => {
+            const statusStyle = statusColors[app.status] || statusColors.submitted;
+            const jobTitle = app?.jobs?.title || 'Unknown Job';
+            const companyName = app?.jobs?.companies?.name || 'Unknown Company';
+            
+            // Format date correctly
+            const appliedDate = new Date(app.applied_at);
+            const formattedDate = appliedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+            return (
+              <TouchableOpacity key={app.id} style={styles.card} onPress={() => router.push(`/application/${app.id}` as any)} activeOpacity={0.7}>
+                <View style={styles.cardTop}>
+                  <View style={styles.avatar}>
+                    <Text style={styles.avatarText}>{companyName.substring(0, 2).toUpperCase()}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.cardTitle} numberOfLines={1}>{jobTitle}</Text>
+                    <Text style={styles.cardSub}>{companyName}</Text>
+                  </View>
+                  <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
+                    <Text style={[styles.statusText, { color: statusStyle.text }]}>
+                      {app.status.replace('_', ' ')}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.cardBottom}>
+                  <Text style={styles.dateText}>Applied {formattedDate}</Text>
+                  <View style={styles.statusDots}>
+                    {['submitted', 'under_review', 'shortlisted', 'interview', 'hired'].map((step, i) => {
+                      const currentIdx = ['submitted', 'under_review', 'shortlisted', 'interview', 'hired'].indexOf(app.status);
+                      const isRejected = app.status === 'rejected';
+                      return (
+                         <View key={step} style={[styles.dot,
+                          i <= currentIdx && !isRejected && { backgroundColor: Colors.light.primary },
+                          isRejected && { backgroundColor: Colors.light.error },
+                        ]} />
+                      );
+                    })}
+                  </View>
+                </View>
+              </TouchableOpacity>
+            );
+          })
         )}
       </ScrollView>
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: Colors.light.background },
+  header: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.lg, paddingBottom: Spacing.sm },
+  title: { fontSize: FontSize.xl, fontWeight: '700', color: Colors.light.text },
+  subtitle: { fontSize: FontSize.sm, color: Colors.light.textSecondary, marginTop: 2 },
+  tabBar: { flexDirection: 'row', marginHorizontal: Spacing.xl, marginTop: Spacing.md, backgroundColor: Colors.light.surfaceHover, borderRadius: BorderRadius.lg, padding: 4 },
+  tab: { flex: 1, paddingVertical: Spacing.sm + 2, borderRadius: BorderRadius.md, alignItems: 'center' },
+  tabActive: { backgroundColor: Colors.light.surface, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 3, elevation: 2 },
+  tabText: { fontSize: FontSize.sm, fontWeight: '600', color: Colors.light.textSecondary },
+  tabTextActive: { color: Colors.light.text },
+  list: { padding: Spacing.xl, gap: Spacing.md, paddingBottom: 30, flexGrow: 1 },
+  emptyState: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60, flex: 1 },
+  emptyText: { fontSize: FontSize.md, color: Colors.light.textTertiary, textAlign: 'center' },
+  card: { backgroundColor: Colors.light.surface, borderRadius: BorderRadius.xl, padding: Spacing.lg, borderWidth: 1, borderColor: Colors.light.border },
+  cardTop: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
+  avatar: { width: 44, height: 44, borderRadius: BorderRadius.lg, backgroundColor: Colors.light.surfaceHover, alignItems: 'center', justifyContent: 'center' },
+  avatarText: { fontSize: FontSize.sm, fontWeight: '700', color: Colors.light.textSecondary },
+  cardTitle: { fontSize: FontSize.md, fontWeight: '700', color: Colors.light.text },
+  cardSub: { fontSize: FontSize.sm, color: Colors.light.textSecondary, marginTop: 1 },
+  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: BorderRadius.full },
+  statusText: { fontSize: FontSize.xs, fontWeight: '600', textTransform: 'capitalize' },
+  cardBottom: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: Spacing.md, paddingTop: Spacing.md, borderTopWidth: 1, borderTopColor: Colors.light.borderLight },
+  dateText: { fontSize: FontSize.xs, color: Colors.light.textTertiary },
+  statusDots: { flexDirection: 'row', gap: 4 },
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.light.border },
+});

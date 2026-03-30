@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
-import { applications } from "@/lib/mock-data";
+import { supabase } from "@/lib/supabase/client";
 
 const statusBadgeVariant: Record<string, "default" | "secondary" | "destructive" | "success" | "warning" | "outline"> = {
   submitted: "secondary", under_review: "default", shortlisted: "warning", interview: "outline", rejected: "destructive", hired: "success",
@@ -17,6 +17,35 @@ const statusBadgeVariant: Record<string, "default" | "secondary" | "destructive"
 export default function ApplicationsPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [applications, setApplications] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  React.useEffect(() => {
+    async function fetchApps() {
+      const { data } = await supabase.from("applications").select(`
+        id,
+        status,
+        applied_at,
+        jobs ( title, companies ( name ) ),
+        user_profiles ( full_name, email )
+      `).order("applied_at", { ascending: false });
+
+      if (data) {
+        const formatted = data.map((a: any) => ({
+          id: a.id,
+          userName: a.user_profiles?.full_name || "Unknown",
+          userEmail: a.user_profiles?.email || "Unknown",
+          jobTitle: a.jobs?.title || "Unknown",
+          companyName: a.jobs?.companies?.name || "Unknown",
+          status: a.status,
+          appliedAt: new Date(a.applied_at).toLocaleDateString(),
+        }));
+        setApplications(formatted);
+      }
+      setLoading(false);
+    }
+    fetchApps();
+  }, []);
 
   const filtered = applications.filter((a) => {
     const matchesSearch = a.userName.toLowerCase().includes(search.toLowerCase()) ||
@@ -66,7 +95,9 @@ export default function ApplicationsPage() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {filtered.length === 0 ? (
+          {loading ? (
+            <TableRow><TableCell colSpan={6} className="text-center py-12 text-slate-400">Loading applications...</TableCell></TableRow>
+          ) : filtered.length === 0 ? (
             <TableRow><TableCell colSpan={6} className="text-center py-12 text-slate-400">No applications found.</TableCell></TableRow>
           ) : (
             filtered.map((app) => (

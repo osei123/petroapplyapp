@@ -15,17 +15,29 @@ import {
   TableRow,
   TableCell,
 } from "@/components/ui/table";
-import { companies } from "@/lib/mock-data";
+import { supabase } from "@/lib/supabase/client";
 
 export default function CompaniesPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [companies, setCompanies] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  React.useEffect(() => {
+    async function loadCompanies() {
+      const { data } = await supabase.from("companies").select("*").order("name");
+      if (data) setCompanies(data);
+      setLoading(false);
+    }
+    loadCompanies();
+  }, []);
 
   const filtered = companies.filter((c) => {
     const matchesSearch =
-      c.name.toLowerCase().includes(search.toLowerCase()) ||
-      c.headquarters.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = statusFilter === "all" || c.status === statusFilter;
+      c.name?.toLowerCase().includes(search.toLowerCase()) ||
+      c.headquarters?.toLowerCase().includes(search.toLowerCase());
+    const cStatus = 'active'; // Add status column logic if existed in schema
+    const matchesStatus = statusFilter === "all" || cStatus === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
@@ -89,7 +101,13 @@ export default function CompaniesPage() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {filtered.length === 0 ? (
+          {loading ? (
+            <TableRow>
+              <TableCell colSpan={6} className="text-center py-12 text-slate-400">
+                Loading companies...
+              </TableCell>
+            </TableRow>
+          ) : filtered.length === 0 ? (
             <TableRow>
               <TableCell colSpan={6} className="text-center py-12 text-slate-400">
                 No companies found matching your criteria.
@@ -113,30 +131,14 @@ export default function CompaniesPage() {
                 <TableCell className="text-slate-600">{company.industrySegment}</TableCell>
                 <TableCell>
                   <div className="flex flex-wrap gap-1">
-                    {company.regions.slice(0, 2).map((r) => (
-                      <Badge key={r} variant="secondary" className="text-xs">
-                        {r}
-                      </Badge>
-                    ))}
-                    {company.regions.length > 2 && (
-                      <Badge variant="secondary" className="text-xs">
-                        +{company.regions.length - 2}
-                      </Badge>
-                    )}
+                    <Badge variant="secondary" className="text-xs">
+                      Global
+                    </Badge>
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Badge
-                    variant={
-                      company.status === "active"
-                        ? "success"
-                        : company.status === "inactive"
-                        ? "warning"
-                        : "secondary"
-                    }
-                    className="capitalize"
-                  >
-                    {company.status}
+                  <Badge variant="success" className="capitalize">
+                    Active
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">

@@ -1,127 +1,299 @@
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { currentUser, jobs } from '@/constants/mock-data';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Colors, Spacing, BorderRadius, FontSize } from '@/constants/theme';
+import { useAuth } from '@/contexts/AuthContext';
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { supabase } from '@/lib/supabase';
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const recommendedJobs = jobs.slice(0, 3);
-  const categories = ['Full-Time', 'Remote', 'Web Developer', 'Internship'];
+  const { userProfile } = useAuth();
+  const profileCompletion = userProfile?.profile_completion || 0;
+  const [featuredJobs, setFeaturedJobs] = useState<any[]>([]);
+  const [recentJobs, setRecentJobs] = useState<any[]>([]);
+  const [topCompanies, setTopCompanies] = useState<any[]>([]);
+  const [appStats, setAppStats] = useState({ total: 0, pending: 0, interview: 0 });
+  const [loading, setLoading] = useState(true);
+
+  const fetchData = async () => {
+    try {
+      // Fetch user context
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData?.user?.id;
+
+      // 1. Fetch featured jobs
+      const { data: featuredData } = await supabase
+        .from('jobs')
+        .select(`*, companies (name)`)
+        .eq('featured', true)
+        .limit(5);
+
+      if (featuredData) setFeaturedJobs(featuredData);
+
+      // 2. Fetch recent jobs
+      const { data: recentData } = await supabase
+        .from('jobs')
+        .select(`*, companies (name)`)
+        .order('created_at', { ascending: false })
+        .limit(4);
+
+      if (recentData) setRecentJobs(recentData);
+
+      // 3. Fetch top companies
+      const { data: companiesData } = await supabase
+        .from('companies')
+        .select('*')
+        .order('job_count', { ascending: false })
+        .limit(4);
+
+      if (companiesData) setTopCompanies(companiesData);
+
+      // 4. Fetch user applications if logged in
+      if (userId) {
+        const { data: applications } = await supabase
+          .from('applications')
+          .select('status')
+          .eq('user_id', userId);
+
+        if (applications) {
+          const total = applications.length;
+          const pending = applications.filter(a => a.status === 'submitted' || a.status === 'under_review').length;
+          const interview = applications.filter(a => a.status === 'shortlisted' || a.status === 'interview').length;
+          setAppStats({ total, pending, interview });
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchData();
+    }, [])
+  );
+
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={Colors.light.primary} />
+      </SafeAreaView>
+    );
+  }
 
   return (
-    <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
-        
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
-        <View className="flex-row justify-between items-center px-6 pt-4 pb-6">
-          <View className="flex-row items-center">
-            <View className="w-12 h-12 rounded-full overflow-hidden mr-3 bg-muted">
-               <Text className="text-xl font-bold text-muted-foreground w-full h-full text-center mt-2.5">
-                  {currentUser.fullName.split(' ').map(n=>n[0]).join('')}
-               </Text>
-            </View>
-            <View>
-              <Text className="text-[13px] text-muted-foreground font-medium mb-0.5">Good Afternoon</Text>
-              <Text className="text-base font-bold text-foreground">{currentUser.fullName}</Text>
-            </View>
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.greeting}>Good Morning 👋</Text>
+            <Text style={styles.userName}>{userProfile?.full_name || 'Student'}</Text>
           </View>
-          <TouchableOpacity className="w-11 h-11 rounded-full bg-white shadow-sm items-center justify-center relative">
-            <Ionicons name="notifications" size={20} color="#0f172a" />
-            <View className="absolute top-2.5 right-3 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white" />
+          <TouchableOpacity style={styles.notifBtn} onPress={() => router.push('/notifications' as any)}>
+            <IconSymbol name="bell.fill" size={22} color={Colors.light.text} />
+            <View style={styles.notifDot} />
           </TouchableOpacity>
         </View>
 
-        {/* Hero Section */}
-        <View className="flex-row justify-between items-center px-6 mb-6">
-          <Text className="text-[34px] leading-[42px] tracking-tight text-foreground">
-            Let's Find{'\n'}
-            <Text className="font-bold">Your Next Job</Text>
-          </Text>
-          <TouchableOpacity className="w-16 h-16 rounded-full bg-primary items-center justify-center shadow-md shadow-primary/30 mr-2">
-            <Ionicons name="search" size={28} color="#ffffff" />
-          </TouchableOpacity>
-        </View>
+        {/* Search */}
+        <TouchableOpacity style={styles.searchBar} onPress={() => router.push('/(tabs)/jobs' as any)}>
+          <IconSymbol name="magnifyingglass" size={18} color={Colors.light.textTertiary} />
+          <Text style={styles.searchText}>Search jobs, companies...</Text>
+        </TouchableOpacity>
 
-        {/* Categories */}
-        <View className="mb-8">
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 24, gap: 12 }}>
-            {categories.map((category, index) => (
-              <TouchableOpacity key={category} className={`px-6 py-3 rounded-full shadow-sm ${index === 0 ? 'bg-white' : 'bg-white'}`}>
-                <Text className="text-sm font-semibold text-foreground">{category}</Text>
+        {/* Profile Completion */}
+        {profileCompletion < 100 && (
+          <TouchableOpacity style={styles.profileCard} onPress={() => router.push('/edit-profile' as any)}>
+            <View style={styles.profileCardContent}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.profileCardTitle}>Complete Your Profile</Text>
+                <Text style={styles.profileCardSub}>
+                  {profileCompletion}% complete — add more details to stand out
+                </Text>
+              </View>
+              <View style={styles.progressRing}>
+                <Text style={styles.progressText}>{profileCompletion}%</Text>
+              </View>
+            </View>
+            <View style={styles.progressBar}>
+              <View style={[styles.progressFill, { width: `${profileCompletion}%` }]} />
+            </View>
+          </TouchableOpacity>
+        )}
+
+        {/* Application Tracker */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Application Tracker</Text>
+          <View style={styles.trackerRow}>
+            {[
+              { label: 'Total', count: appStats.total, color: Colors.light.primary },
+              { label: 'Pending', count: appStats.pending, color: Colors.light.warning },
+              { label: 'Interview', count: appStats.interview, color: Colors.light.success },
+            ].map((item) => (
+              <TouchableOpacity key={item.label} style={styles.trackerItem} onPress={() => router.push('/(tabs)/applications' as any)}>
+                <Text style={[styles.trackerCount, { color: item.color }]}>{item.count}</Text>
+                <Text style={styles.trackerLabel}>{item.label}</Text>
               </TouchableOpacity>
             ))}
-          </ScrollView>
+          </View>
         </View>
 
-        {/* Recommended Jobs */}
-        <View className="px-6">
-          <Text className="text-xl font-bold text-foreground mb-6">Recommendation For you</Text>
-          
-          <View className="gap-6">
-            {recommendedJobs.map((job, idx) => (
-              <TouchableOpacity key={job.id} onPress={() => router.push(`/job/${job.id}` as any)} activeOpacity={0.9}>
-                <View className="p-5 rounded-[32px] bg-white shadow-sm border border-slate-100">
-                  
-                  {/* Card Header */}
-                  <View className="flex-row justify-between items-start mb-5">
-                    <View className="flex-row items-center flex-1">
-                      <View className={`w-14 h-14 rounded-full items-center justify-center mr-4 ${idx === 0 ? 'bg-primary' : 'bg-amber-300'}`}>
-                         <Text className={`text-xl font-bold ${idx === 0 ? 'text-white' : 'text-slate-900'}`}>{job.companyName.substring(0,1)}</Text>
-                      </View>
-                      <View className="flex-1">
-                        <Text className="text-[17px] font-bold text-foreground mb-1" numberOfLines={1}>{job.title}</Text>
-                        <View className="flex-row items-center">
-                          <Ionicons name="location-outline" size={14} color="#94a3b8" />
-                          <Text className="text-[13px] text-muted-foreground ml-1">{job.location}</Text>
-                        </View>
-                      </View>
+        {/* Featured Jobs */}
+        {featuredJobs.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Featured Jobs</Text>
+              <TouchableOpacity onPress={() => router.push('/(tabs)/jobs' as any)}>
+                <Text style={styles.seeAll}>See All</Text>
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={featuredJobs}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={{ gap: 12 }}
+              renderItem={({ item }) => (
+                <TouchableOpacity style={styles.jobCard} onPress={() => router.push(`/job/${item.id}` as any)}>
+                  <View style={styles.jobCardHeader}>
+                    <View style={styles.companyAvatar}>
+                      <Text style={styles.companyAvatarText}>
+                        {item.companies?.name ? item.companies.name.substring(0, 2).toUpperCase() : 'CO'}
+                      </Text>
                     </View>
-                    <TouchableOpacity className="w-10 h-10 rounded-full bg-slate-100 items-center justify-center ml-2 text-foreground">
-                      <Ionicons name="bookmark" size={18} color="#0f172a" />
-                    </TouchableOpacity>
+                    <View style={styles.featuredBadge}>
+                      <IconSymbol name="star.fill" size={10} color="#f59e0b" />
+                      <Text style={styles.featuredText}>Featured</Text>
+                    </View>
                   </View>
+                  <Text style={styles.jobCardTitle} numberOfLines={1}>{item.title}</Text>
+                  <Text style={styles.jobCardCompany}>{item.companies?.name || 'Unknown'}</Text>
+                  <View style={styles.jobCardMeta}>
+                    <IconSymbol name="location.fill" size={12} color={Colors.light.textTertiary} />
+                    <Text style={styles.jobCardLocation}>{item.location || 'Remote'}</Text>
+                  </View>
+                  <View style={styles.jobCardTags}>
+                    <View style={styles.tag}><Text style={styles.tagText}>{item.employment_type}</Text></View>
+                    <View style={styles.tag}><Text style={styles.tagText}>{item.remote_type}</Text></View>
+                  </View>
+                  <Text style={styles.jobCardSalary}>{item.salary_range || 'Competitive'}</Text>
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        )}
 
-                  {/* Tags */}
-                  <View className="flex-row gap-2 mb-6">
-                    <View className="px-4 py-2 rounded-full bg-slate-100">
-                       <Text className="text-xs font-semibold text-muted-foreground">Full-Time</Text>
-                    </View>
-                    <View className="px-4 py-2 rounded-full bg-slate-100">
-                       <Text className="text-xs font-semibold text-muted-foreground">Remote</Text>
-                    </View>
-                    <View className="px-4 py-2 rounded-full bg-slate-100">
-                       <Text className="text-xs font-semibold text-muted-foreground">Internship</Text>
-                    </View>
+        {/* Top Companies */}
+        {topCompanies.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Top Companies</Text>
+              <TouchableOpacity onPress={() => router.push('/(tabs)/jobs' as any)}>
+                <Text style={styles.seeAll}>See All</Text>
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={topCompanies}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={{ gap: 12 }}
+              renderItem={({ item }) => (
+                <TouchableOpacity style={styles.companyCard} onPress={() => router.push(`/company/${item.id}` as any)}>
+                  <View style={styles.companyCardAvatar}>
+                    <Text style={styles.companyCardAvatarText}>{item.name.substring(0, 2).toUpperCase()}</Text>
                   </View>
-                  
-                  {/* Card Footer */}
-                  <View className="flex-row justify-between items-center">
-                    <View className="flex-row items-center">
-                       {/* Mock Avatars */}
-                       <View className="flex-row">
-                         <View className="w-8 h-8 rounded-full bg-slate-200 border-2 border-white z-30 overflow-hidden items-center justify-center"><Text className="text-[10px] font-bold">JD</Text></View>
-                         <View className="w-8 h-8 rounded-full bg-slate-300 border-2 border-white -ml-3 z-20 overflow-hidden items-center justify-center"><Text className="text-[10px] font-bold">AS</Text></View>
-                         <View className="w-8 h-8 rounded-full bg-slate-800 border-2 border-white -ml-3 z-10 items-center justify-center">
-                            <Ionicons name="add" size={14} color="#fff" />
-                         </View>
-                       </View>
-                       <Text className="text-xs font-medium text-muted-foreground ml-2">388 Applicants</Text>
-                    </View>
-                    <View className="items-end">
-                      <Text className="text-lg font-bold text-foreground whitespace-nowrap">{job.salaryRange.split('/')[0]}</Text>
-                      <Text className="text-[11px] font-medium text-muted-foreground text-right relative top-[-2px]">month</Text>
-                    </View>
-                  </View>
-                  
+                  <Text style={styles.companyCardName} numberOfLines={1}>{item.name}</Text>
+                  <Text style={styles.companyCardJobs}>{item.job_count || 0} jobs</Text>
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        )}
+
+        {/* Recent Jobs */}
+        {recentJobs.length > 0 && (
+          <View style={[styles.section, { marginBottom: 30 }]}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Recent Jobs</Text>
+            </View>
+            {recentJobs.map((job) => (
+              <TouchableOpacity key={job.id} style={styles.recentJob} onPress={() => router.push(`/job/${job.id}` as any)}>
+                <View style={styles.recentJobAvatar}>
+                  <Text style={styles.recentJobAvatarText}>
+                    {job.companies?.name ? job.companies.name.substring(0, 2).toUpperCase() : 'CO'}
+                  </Text>
                 </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.recentJobTitle} numberOfLines={1}>{job.title}</Text>
+                  <Text style={styles.recentJobSub}>{job.companies?.name || 'Unknown'} · {job.location || 'Remote'}</Text>
+                </View>
+                <Text style={styles.recentJobTime}>
+                  {new Date(job.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                </Text>
               </TouchableOpacity>
             ))}
           </View>
-        </View>
-
+        )}
       </ScrollView>
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: Colors.light.background },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: Spacing.xl, paddingTop: Spacing.lg, paddingBottom: Spacing.md },
+  greeting: { fontSize: FontSize.sm, color: Colors.light.textSecondary },
+  userName: { fontSize: FontSize.xl, fontWeight: '700', color: Colors.light.text, marginTop: 2 },
+  notifBtn: { width: 44, height: 44, borderRadius: BorderRadius.full, backgroundColor: Colors.light.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.light.border },
+  notifDot: { position: 'absolute', top: 10, right: 10, width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.light.primary },
+  searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.light.surface, marginHorizontal: Spacing.xl, marginTop: Spacing.md, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md + 2, borderRadius: BorderRadius.xl, borderWidth: 1, borderColor: Colors.light.border, gap: Spacing.sm },
+  searchText: { fontSize: FontSize.md, color: Colors.light.textTertiary },
+  profileCard: { marginHorizontal: Spacing.xl, marginTop: Spacing.lg, backgroundColor: Colors.light.primaryLight, borderRadius: BorderRadius.xl, padding: Spacing.lg, borderWidth: 1, borderColor: Colors.light.primary + '30' },
+  profileCardContent: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
+  profileCardTitle: { fontSize: FontSize.md, fontWeight: '700', color: Colors.light.primaryDark },
+  profileCardSub: { fontSize: FontSize.sm, color: Colors.light.primary, marginTop: 2 },
+  progressRing: { width: 48, height: 48, borderRadius: 24, backgroundColor: Colors.light.primary, alignItems: 'center', justifyContent: 'center' },
+  progressText: { color: '#fff', fontSize: FontSize.sm, fontWeight: '700' },
+  progressBar: { height: 4, backgroundColor: Colors.light.primary + '30', borderRadius: 2, marginTop: Spacing.md },
+  progressFill: { height: 4, backgroundColor: Colors.light.primary, borderRadius: 2 },
+  section: { marginTop: Spacing.xxl, paddingHorizontal: Spacing.xl },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.md },
+  sectionTitle: { fontSize: FontSize.lg, fontWeight: '700', color: Colors.light.text },
+  seeAll: { fontSize: FontSize.sm, fontWeight: '600', color: Colors.light.primary },
+  trackerRow: { flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.md },
+  trackerItem: { flex: 1, backgroundColor: Colors.light.surface, borderRadius: BorderRadius.xl, padding: Spacing.lg, alignItems: 'center', borderWidth: 1, borderColor: Colors.light.border },
+  trackerCount: { fontSize: FontSize.xxl, fontWeight: '800' },
+  trackerLabel: { fontSize: FontSize.sm, color: Colors.light.textSecondary, marginTop: 4 },
+  jobCard: { width: 260, backgroundColor: Colors.light.surface, borderRadius: BorderRadius.xl, padding: Spacing.lg, borderWidth: 1, borderColor: Colors.light.border },
+  jobCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.md },
+  companyAvatar: { width: 40, height: 40, borderRadius: BorderRadius.lg, backgroundColor: Colors.light.surfaceHover, alignItems: 'center', justifyContent: 'center' },
+  companyAvatarText: { fontSize: FontSize.sm, fontWeight: '700', color: Colors.light.textSecondary },
+  featuredBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#fef3c7', paddingHorizontal: 8, paddingVertical: 4, borderRadius: BorderRadius.full },
+  featuredText: { fontSize: 10, fontWeight: '700', color: '#92400e' },
+  jobCardTitle: { fontSize: FontSize.md, fontWeight: '700', color: Colors.light.text },
+  jobCardCompany: { fontSize: FontSize.sm, color: Colors.light.textSecondary, marginTop: 2 },
+  jobCardMeta: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: Spacing.sm },
+  jobCardLocation: { fontSize: FontSize.xs, color: Colors.light.textTertiary },
+  jobCardTags: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.md },
+  tag: { backgroundColor: Colors.light.surfaceHover, paddingHorizontal: 10, paddingVertical: 4, borderRadius: BorderRadius.full },
+  tagText: { fontSize: FontSize.xs, color: Colors.light.textSecondary, textTransform: 'capitalize' },
+  jobCardSalary: { fontSize: FontSize.md, fontWeight: '700', color: Colors.light.primary, marginTop: Spacing.md },
+  companyCard: { width: 130, backgroundColor: Colors.light.surface, borderRadius: BorderRadius.xl, padding: Spacing.lg, alignItems: 'center', borderWidth: 1, borderColor: Colors.light.border },
+  companyCardAvatar: { width: 48, height: 48, borderRadius: BorderRadius.lg, backgroundColor: Colors.light.surfaceHover, alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.sm },
+  companyCardAvatarText: { fontSize: FontSize.md, fontWeight: '700', color: Colors.light.textSecondary },
+  companyCardName: { fontSize: FontSize.sm, fontWeight: '600', color: Colors.light.text, textAlign: 'center' },
+  companyCardJobs: { fontSize: FontSize.xs, color: Colors.light.textTertiary, marginTop: 2 },
+  recentJob: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.light.surface, borderRadius: BorderRadius.lg, padding: Spacing.md, marginTop: Spacing.sm, borderWidth: 1, borderColor: Colors.light.border, gap: Spacing.md },
+  recentJobAvatar: { width: 40, height: 40, borderRadius: BorderRadius.lg, backgroundColor: Colors.light.surfaceHover, alignItems: 'center', justifyContent: 'center' },
+  recentJobAvatarText: { fontSize: FontSize.sm, fontWeight: '700', color: Colors.light.textSecondary },
+  recentJobTitle: { fontSize: FontSize.md, fontWeight: '600', color: Colors.light.text },
+  recentJobSub: { fontSize: FontSize.sm, color: Colors.light.textSecondary, marginTop: 2 },
+  recentJobTime: { fontSize: FontSize.xs, color: Colors.light.textTertiary },
+});

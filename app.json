@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "petroapplyapp",
-    "slug": "petroapplyapp",
+    "slug": "petro-apply",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -19,7 +19,8 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.obagyapongsorganization.petroapply"
     },
     "web": {
       "output": "static",
@@ -46,6 +47,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "1731ee70-1b40-494e-ab6c-1109cd388c44"
+      }
+    },
+    "owner": "obagyapongs-organization"
   }
 }

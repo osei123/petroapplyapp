@@ -1,9 +1,10 @@
 "use client";
 
 import React from "react";
-import { usePathname } from "next/navigation";
-import { Bell, Search } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Bell, Search, LogOut } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { supabase } from "@/lib/supabase/client";
 
 const pageTitles: Record<string, string> = {
   "/admin/dashboard": "Dashboard",
@@ -11,7 +12,6 @@ const pageTitles: Record<string, string> = {
   "/admin/jobs": "Jobs",
   "/admin/users": "Users",
   "/admin/applications": "Applications",
-  "/admin/content-orders": "Content Orders",
   "/admin/settings": "Settings",
   "/admin/activity-logs": "Activity Logs",
 };
@@ -29,6 +29,12 @@ function getPageTitle(pathname: string): string {
 export function Topbar() {
   const pathname = usePathname();
   const title = getPageTitle(pathname);
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push("/login");
+  };
 
   return (
     <header className="flex items-center justify-between px-8 h-16 border-b border-slate-100 bg-white/80 backdrop-blur-md sticky top-0 z-30">
@@ -61,6 +67,13 @@ export function Topbar() {
             <p className="text-sm font-semibold text-slate-900 leading-tight">Platform Admin</p>
             <p className="text-xs text-slate-500">Super Admin</p>
           </div>
+          <button 
+            onClick={handleLogout} 
+            className="ml-2 p-2 rounded-full hover:bg-slate-100 text-slate-500 transition-colors" 
+            title="Log out"
+          >
+            <LogOut size={18} />
+          </button>
         </div>
       </div>
     </header>

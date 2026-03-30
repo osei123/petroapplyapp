@@ -10,17 +10,39 @@ import { Input } from "@/components/ui/input";
 import {
   Table, TableHeader, TableBody, TableHead, TableRow, TableCell,
 } from "@/components/ui/table";
-import { jobs } from "@/lib/mock-data";
+import { supabase } from "@/lib/supabase/client";
 
 export default function JobsPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [jobs, setJobs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  React.useEffect(() => {
+    async function fetchJobs() {
+      const { data } = await supabase
+        .from('jobs')
+        .select('*, companies(name)')
+        .order('created_at', { ascending: false });
+        
+      if (data) {
+        const formatted = data.map((j: any) => ({
+          ...j,
+          companyName: j.companies?.name || 'Unknown',
+          status: 'published' // Default status since schema lacks strict status field currently
+        }));
+        setJobs(formatted);
+      }
+      setLoading(false);
+    }
+    fetchJobs();
+  }, []);
 
   const filtered = jobs.filter((j) => {
     const matchesSearch =
-      j.title.toLowerCase().includes(search.toLowerCase()) ||
-      j.companyName.toLowerCase().includes(search.toLowerCase()) ||
-      j.location.toLowerCase().includes(search.toLowerCase());
+      j.title?.toLowerCase().includes(search.toLowerCase()) ||
+      j.companyName?.toLowerCase().includes(search.toLowerCase()) ||
+      j.location?.toLowerCase().includes(search.toLowerCase());
     const matchesStatus = statusFilter === "all" || j.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -71,41 +93,45 @@ export default function JobsPage() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {filtered.length === 0 ? (
+          {loading ? (
+            <TableRow>
+              <TableCell colSpan={7} className="text-center py-12 text-slate-400">Loading jobs...</TableCell>
+            </TableRow>
+          ) : filtered.length === 0 ? (
             <TableRow>
               <TableCell colSpan={7} className="text-center py-12 text-slate-400">No jobs found.</TableCell>
             </TableRow>
           ) : (
-            filtered.map((job) => (
-              <TableRow key={job.id}>
+            filtered.map((j) => (
+              <TableRow key={j.id}>
                 <TableCell>
                   <div>
-                    <p className="font-semibold text-slate-900">{job.title}</p>
+                    <p className="font-semibold text-slate-900">{j.title}</p>
                     <div className="flex gap-1.5 mt-1">
-                      {job.featured && <Badge variant="default" className="text-[10px]">Featured</Badge>}
-                      <Badge variant="secondary" className="text-[10px] capitalize">{job.remoteType}</Badge>
+                      {j.featured && <Badge variant="default" className="text-[10px]">Featured</Badge>}
+                      {j.remote_type && <Badge variant="secondary" className="text-[10px] capitalize">{j.remote_type}</Badge>}
                     </div>
                   </div>
                 </TableCell>
-                <TableCell className="text-slate-600">{job.companyName}</TableCell>
-                <TableCell className="text-slate-600">{job.location}</TableCell>
+                <TableCell className="text-slate-600">{j.companyName}</TableCell>
+                <TableCell className="text-slate-600">{j.location}</TableCell>
                 <TableCell>
-                  <Badge variant="secondary" className="capitalize">{job.employmentType.replace("-", " ")}</Badge>
+                  {j.employment_type && <Badge variant="secondary" className="capitalize">{j.employment_type.replace("-", " ")}</Badge>}
                 </TableCell>
-                <TableCell className="text-slate-600">{job.deadline}</TableCell>
+                <TableCell className="text-slate-600">{j.deadline || 'N/A'}</TableCell>
                 <TableCell>
                   <Badge variant={
-                    job.status === "published" ? "success" :
-                    job.status === "draft" ? "secondary" :
-                    job.status === "closed" ? "warning" : "outline"
-                  } className="capitalize">{job.status}</Badge>
+                    j.status === "published" ? "success" :
+                    j.status === "draft" ? "secondary" :
+                    j.status === "closed" ? "warning" : "outline"
+                  } className="capitalize">{j.status}</Badge>
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-1">
-                    <Link href={`/admin/jobs/${job.id}`}>
+                    <Link href={`/admin/jobs/${j.id}`}>
                       <Button variant="ghost" size="icon" className="h-8 w-8"><Eye size={14} /></Button>
                     </Link>
-                    <Link href={`/admin/jobs/${job.id}/edit`}>
+                    <Link href={`/admin/jobs/${j.id}/edit`}>
                       <Button variant="ghost" size="icon" className="h-8 w-8"><Pencil size={14} /></Button>
                     </Link>
                     <Button variant="ghost" size="icon" className="h-8 w-8"><Copy size={14} /></Button>

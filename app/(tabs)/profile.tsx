@@ -1,139 +1,162 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { currentUser } from '@/constants/mock-data';
+import React from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Colors, Spacing, BorderRadius, FontSize } from '@/constants/theme';
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
+
+const menuItems = [
+  { label: 'Edit Profile', icon: 'person.fill' as const, route: '/edit-profile' },
+  { label: 'Notifications', icon: 'bell.fill' as const, route: '/notifications' },
+  { label: 'Settings', icon: 'gear' as const, route: '/settings' },
+];
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const [expandedSection, setExpandedSection] = useState<string | null>('Education');
+  const { user, userProfile } = useAuth();
 
-  const toggleSection = (section: string) => {
-    setExpandedSection(expandedSection === section ? null : section);
-  };
+  if (!userProfile) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={Colors.light.primary} />
+      </View>
+    );
+  }
+
+  const initials = userProfile.full_name 
+    ? userProfile.full_name.split(" ").map((n: string) => n[0]).join("").substring(0, 2) 
+    : "PA";
 
   return (
-    <View className="flex-1 bg-slate-50">
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
-        
-        {/* Top Image Section (Header) */}
-        <View className="relative w-full h-[400px]">
-          {/* Header Actions */}
-          <SafeAreaView className="absolute top-0 left-0 right-0 z-10 flex-row justify-between px-6 pt-4">
-            <TouchableOpacity onPress={() => router.back()} className="w-12 h-12 rounded-full bg-white/80 items-center justify-center border border-white/50 backdrop-blur-md">
-              <Ionicons name="arrow-back" size={24} color="#0f172a" />
-            </TouchableOpacity>
-            <TouchableOpacity className="w-12 h-12 rounded-full bg-slate-900 items-center justify-center shadow-lg">
-              <Ionicons name="briefcase" size={20} color="#ffffff" />
-            </TouchableOpacity>
-          </SafeAreaView>
-
-          {/* User Image Background */}
-          {/* In a real app this would be currentUser.profileImage, we'll use a placeholder resembling the mockup */}
-          <Image 
-            source={{ uri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=800&auto=format&fit=crop' }} 
-            className="w-full h-full opacity-90"
-            style={{ resizeMode: 'cover' }}
-          />
-
-          {/* Gradient Overlay at bottom to blend into background */}
-          <View className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-slate-50 to-transparent" />
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Profile</Text>
         </View>
 
-        {/* Content Section */}
-        <View className="px-6 -mt-10 z-20">
-          
-          {/* Title & Name */}
-          <View className="mb-6">
-            <Text className="text-[34px] font-bold text-foreground mb-1 leading-tight">{currentUser.degree}</Text>
-            <Text className="text-[17px] font-medium text-muted-foreground">By {currentUser.fullName}</Text>
-          </View>
-
-          {/* Action Buttons */}
-          <View className="flex-row gap-4 mb-8">
-            <TouchableOpacity className="flex-auto h-14 bg-slate-900 rounded-full flex-row items-center justify-center gap-2 shadow-sm">
-              <Ionicons name="document-text" size={20} color="#ffffff" />
-              <Text className="text-[15px] font-bold text-white">CV • 1.2 MB</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity className="flex-auto h-14 bg-primary rounded-full flex-row items-center justify-center gap-2 shadow-md shadow-primary/30">
-              <Ionicons name="call" size={20} color="#ffffff" />
-              <Text className="text-[15px] font-bold text-white">Contact</Text>
+        {/* Profile Card */}
+        <View style={styles.profileCard}>
+          <View style={styles.avatarContainer}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{initials}</Text>
+            </View>
+            <TouchableOpacity style={styles.editBadge}>
+              <IconSymbol name="person.fill" size={12} color="#fff" />
             </TouchableOpacity>
           </View>
+          <Text style={styles.fullName}>{userProfile.full_name || "Petro Scholar"}</Text>
+          <Text style={styles.email}>{user?.email}</Text>
+          <Text style={styles.degree}>{userProfile.degree || "Degree"} · {userProfile.university || "University"}</Text>
 
-          {/* Accordion List */}
-          <View className="gap-3">
-            
-            {/* Work Experience */}
-            <TouchableOpacity 
-              onPress={() => toggleSection('Experience')}
-              className="bg-white rounded-[24px] p-5 shadow-sm border border-slate-100"
-            >
-              <View className="flex-row justify-between items-center">
-                <Text className="text-[20px] font-bold text-foreground">Work Experience</Text>
-                <Ionicons name={expandedSection === 'Experience' ? 'chevron-up' : 'chevron-down'} size={20} color="#94a3b8" />
-              </View>
-              {expandedSection === 'Experience' && (
-                <View className="mt-4 pt-4 border-t border-slate-100">
-                  <Text className="text-[15px] text-muted-foreground mb-1">SF/Remote • Full time • Engineering</Text>
-                  <Text className="text-sm font-medium text-foreground mt-2">Senior Developer at TechCorp (2020 - Present)</Text>
-                  <Text className="text-sm text-muted-foreground mt-1">Led a team of 5 engineers to build the core platform...</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-
-            {/* Education */}
-            <TouchableOpacity 
-              onPress={() => toggleSection('Education')}
-              className="bg-white rounded-[24px] p-5 shadow-sm border border-slate-100"
-            >
-              <View className="flex-row justify-between items-center">
-                <Text className="text-[20px] font-bold text-foreground">Education</Text>
-                <Ionicons name={expandedSection === 'Education' ? 'chevron-up' : 'chevron-down'} size={20} color="#94a3b8" />
-              </View>
-              {expandedSection === 'Education' && (
-                <View className="mt-5 flex-row">
-                  <View className="w-14 h-14 bg-rose-900 rounded-2xl items-center justify-center mr-4 shadow-sm overflow-hidden">
-                    <Text className="text-white font-bold text-xs text-center leading-tight">HARVARD</Text>
-                  </View>
-                  <View className="flex-1 justify-center">
-                    <Text className="text-[17px] font-bold text-foreground mb-1">Harvard University</Text>
-                    <Text className="text-sm text-muted-foreground">Bachelor of Computer Science</Text>
-                    <Text className="text-[13px] text-muted-foreground mt-0.5">2009 - 2013</Text>
-                  </View>
-                </View>
-              )}
-            </TouchableOpacity>
-
-            {/* Certification */}
-            <TouchableOpacity 
-              onPress={() => toggleSection('Certification')}
-              className="bg-white rounded-[24px] p-5 shadow-sm border border-slate-100"
-            >
-              <View className="flex-row justify-between items-center">
-                <Text className="text-[20px] font-bold text-foreground">Certification</Text>
-                <Ionicons name={expandedSection === 'Certification' ? 'chevron-up' : 'chevron-down'} size={20} color="#94a3b8" />
-              </View>
-              {expandedSection === 'Certification' && (
-                <View className="mt-5 flex-row items-center">
-                  <View className="w-14 h-14 bg-red-600 rounded-2xl items-center justify-center mr-4">
-                    <Ionicons name="ribbon" size={28} color="#ffffff" />
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-[17px] font-bold text-foreground mb-1">Adobe Certification</Text>
-                    <Text className="text-sm text-muted-foreground">Issued Dec 2022</Text>
-                  </View>
-                </View>
-              )}
-            </TouchableOpacity>
-
+          {/* Completion */}
+          <View style={styles.completionCard}>
+            <View style={styles.completionTop}>
+              <Text style={styles.completionLabel}>Profile Completion</Text>
+              <Text style={styles.completionValue}>{userProfile.profile_completion || 0}%</Text>
+            </View>
+            <View style={styles.progressBar}>
+              <View style={[styles.progressFill, { width: `${userProfile.profile_completion || 0}%` }]} />
+            </View>
           </View>
-
         </View>
 
+        {/* Bio */}
+        {userProfile.bio && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>About</Text>
+            <View style={styles.bioCard}>
+              <Text style={styles.bioText}>{userProfile.bio}</Text>
+            </View>
+          </View>
+        )}
+
+        {/* Skills */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Skills</Text>
+          <View style={styles.skillsWrap}>
+            {userProfile.skills && userProfile.skills.length > 0 ? userProfile.skills.map((skill: string) => (
+              <View key={skill} style={styles.skillChip}>
+                <Text style={styles.skillText}>{skill}</Text>
+              </View>
+            )) : (
+              <Text style={{ color: Colors.light.textTertiary, fontSize: FontSize.sm }}>No skills added yet.</Text>
+            )}
+          </View>
+        </View>
+
+        {/* Details */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Details</Text>
+          <View style={styles.detailsCard}>
+            {[
+              { label: 'Country', value: userProfile.country || "N/A" },
+              { label: 'Phone', value: userProfile.phone || "N/A" },
+              { label: 'Graduation', value: userProfile.graduation_year ? String(userProfile.graduation_year) : "N/A" },
+              { label: 'LinkedIn', value: userProfile.linkedin_url || "N/A" },
+            ].map((item) => (
+              <View key={item.label} style={styles.detailRow}>
+                <Text style={styles.detailLabel}>{item.label}</Text>
+                <Text style={styles.detailValue} numberOfLines={1}>{item.value}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        {/* Menu */}
+        <View style={[styles.section, { marginBottom: 30 }]}>
+          <View style={styles.menuCard}>
+            {menuItems.map((item) => (
+              <TouchableOpacity key={item.label} style={[styles.menuItem, styles.menuBorder]}
+                onPress={() => router.push(item.route as any)}>
+                <IconSymbol name={item.icon} size={20} color={Colors.light.primary} />
+                <Text style={styles.menuLabel}>{item.label}</Text>
+                <IconSymbol name="chevron.right" size={16} color={Colors.light.textTertiary} />
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity style={styles.menuItem} onPress={async () => await supabase.auth.signOut()}>
+              <IconSymbol name="xmark.circle.fill" size={20} color="#ef4444" />
+              <Text style={[styles.menuLabel, { color: "#ef4444" }]}>Log Out</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: Colors.light.background },
+  header: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.lg },
+  headerTitle: { fontSize: FontSize.xl, fontWeight: '700', color: Colors.light.text },
+  profileCard: { alignItems: 'center', marginTop: Spacing.xxl, marginHorizontal: Spacing.xl, backgroundColor: Colors.light.surface, borderRadius: BorderRadius.xxl, padding: Spacing.xxl, borderWidth: 1, borderColor: Colors.light.border },
+  avatarContainer: { position: 'relative', marginBottom: Spacing.md },
+  avatar: { width: 80, height: 80, borderRadius: 40, backgroundColor: Colors.light.primary, alignItems: 'center', justifyContent: 'center' },
+  avatarText: { fontSize: FontSize.xxl, fontWeight: '800', color: '#fff', textTransform: 'uppercase' },
+  editBadge: { position: 'absolute', bottom: 0, right: 0, width: 28, height: 28, borderRadius: 14, backgroundColor: Colors.light.primaryDark, alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: Colors.light.surface },
+  fullName: { fontSize: FontSize.lg, fontWeight: '700', color: Colors.light.text },
+  email: { fontSize: FontSize.sm, color: Colors.light.textSecondary, marginTop: 2 },
+  degree: { fontSize: FontSize.sm, color: Colors.light.textTertiary, marginTop: 4, textAlign: 'center' },
+  completionCard: { width: '100%', backgroundColor: Colors.light.primaryLight, borderRadius: BorderRadius.lg, padding: Spacing.md, marginTop: Spacing.lg },
+  completionTop: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: Spacing.sm },
+  completionLabel: { fontSize: FontSize.sm, color: Colors.light.primaryDark, fontWeight: '600' },
+  completionValue: { fontSize: FontSize.sm, color: Colors.light.primaryDark, fontWeight: '700' },
+  progressBar: { height: 6, backgroundColor: Colors.light.primary + '30', borderRadius: 3 },
+  progressFill: { height: 6, backgroundColor: Colors.light.primary, borderRadius: 3 },
+  section: { marginTop: Spacing.xxl, paddingHorizontal: Spacing.xl },
+  sectionTitle: { fontSize: FontSize.lg, fontWeight: '700', color: Colors.light.text, marginBottom: Spacing.md },
+  bioCard: { backgroundColor: Colors.light.surface, borderRadius: BorderRadius.xl, padding: Spacing.lg, borderWidth: 1, borderColor: Colors.light.border },
+  bioText: { fontSize: FontSize.md, color: Colors.light.textSecondary, lineHeight: 22 },
+  skillsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
+  skillChip: { backgroundColor: Colors.light.primaryLight, paddingHorizontal: 14, paddingVertical: 8, borderRadius: BorderRadius.full },
+  skillText: { fontSize: FontSize.sm, color: Colors.light.primaryDark, fontWeight: '600', textTransform: 'capitalize' },
+  detailsCard: { backgroundColor: Colors.light.surface, borderRadius: BorderRadius.xl, padding: Spacing.lg, borderWidth: 1, borderColor: Colors.light.border },
+  detailRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: Spacing.sm, borderBottomWidth: 1, borderBottomColor: Colors.light.borderLight },
+  detailLabel: { fontSize: FontSize.sm, color: Colors.light.textTertiary },
+  detailValue: { fontSize: FontSize.sm, color: Colors.light.text, fontWeight: '600', maxWidth: '60%' },
+  menuCard: { backgroundColor: Colors.light.surface, borderRadius: BorderRadius.xl, borderWidth: 1, borderColor: Colors.light.border, overflow: 'hidden' },
+  menuItem: { flexDirection: 'row', alignItems: 'center', padding: Spacing.lg, gap: Spacing.md },
+  menuBorder: { borderBottomWidth: 1, borderBottomColor: Colors.light.borderLight },
+  menuLabel: { flex: 1, fontSize: FontSize.md, fontWeight: '600', color: Colors.light.text },
+});
