@@ -23,6 +23,7 @@ export default function ApplicationDetailPage() {
   
   const [status, setStatus] = useState("submitted");
   const [adminNotes, setAdminNotes] = useState("");
+  const [interviewDate, setInterviewDate] = useState("");
 
   const fetchApp = async () => {
     const { data } = await supabase
@@ -53,9 +54,11 @@ export default function ApplicationDetailPage() {
         coverLetter: data.cover_letter_text,
         resumeUrl: data.resume_url,
         adminNotes: data.admin_notes,
+        interviewDate: data.interview_date ? new Date(data.interview_date).toLocaleString() : "",
       });
       setStatus(data.status || "submitted");
       setAdminNotes(data.admin_notes || "");
+      setInterviewDate(data.interview_date ? new Date(data.interview_date).toISOString().slice(0, 16) : "");
     }
     setLoading(false);
   };
@@ -66,9 +69,16 @@ export default function ApplicationDetailPage() {
 
   const handleUpdate = async () => {
     setSaving(true);
+    const payload: any = { status, admin_notes: adminNotes };
+    if (status === "interview") {
+      payload.interview_date = interviewDate ? new Date(interviewDate).toISOString() : null;
+    } else {
+      payload.interview_date = null;
+    }
+
     const { error } = await supabase
       .from("applications")
-      .update({ status, admin_notes: adminNotes })
+      .update(payload)
       .eq("id", params.id);
 
     setSaving(false);
@@ -184,6 +194,12 @@ export default function ApplicationDetailPage() {
                   <p className="text-xs text-slate-400 uppercase tracking-wider">Applied On</p>
                   <p className="text-sm text-slate-700 mt-0.5">{app.appliedAt}</p>
                 </div>
+                {app.interviewDate && app.status === "interview" && (
+                  <div>
+                    <p className="text-xs text-slate-400 uppercase tracking-wider">Interview Date</p>
+                    <p className="text-sm text-slate-700 mt-0.5">{app.interviewDate}</p>
+                  </div>
+                )}
               </div>
               {app.coverLetter && app.status !== "withdrawn" && (
                 <div>
@@ -263,6 +279,17 @@ export default function ApplicationDetailPage() {
                 ))}
               </select>
             </div>
+            {status === "interview" && (
+              <div>
+                <Label>Interview Date & Time</Label>
+                <input 
+                  type="datetime-local" 
+                  value={interviewDate} 
+                  onChange={(e) => setInterviewDate(e.target.value)} 
+                  className="flex h-11 w-full rounded-2xl border border-input bg-transparent px-4 py-2 text-sm shadow-sm mt-1.5" 
+                />
+              </div>
+            )}
             <div>
               <Label>Internal Notes</Label>
               <textarea rows={4} value={adminNotes} onChange={(e) => setAdminNotes(e.target.value)} placeholder="Add internal notes..." className="flex w-full rounded-2xl border border-input bg-transparent px-4 py-3 text-sm shadow-sm mt-1.5 resize-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />

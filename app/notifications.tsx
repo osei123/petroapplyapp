@@ -64,6 +64,38 @@ export default function NotificationsScreen() {
     }
   };
 
+  const clearAll = async () => {
+    if (!user || marking || notifications.length === 0) return;
+    Alert.alert(
+      "Clear All Notifications",
+      "Are you sure you want to delete all notifications? This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Clear All", 
+          style: "destructive", 
+          onPress: async () => {
+            setMarking(true);
+            try {
+              const { error } = await supabase
+                .from('notifications')
+                .delete()
+                .eq('user_id', user.id);
+              
+              if (error) throw error;
+              setNotifications([]);
+            } catch (e: any) {
+              console.error(e);
+              Alert.alert('Error', 'Could not clear notifications');
+            } finally {
+              setMarking(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const hasUnread = notifications.some(n => !n.read);
 
   return (
@@ -77,17 +109,26 @@ export default function NotificationsScreen() {
           <IconSymbol name="arrow.left" size={20} color="#0C4A6E" />
         </TouchableOpacity>
         <Text className="text-lg font-outfit-b text-foreground">Notifications</Text>
-        <TouchableOpacity 
-          onPress={markAllAsRead} 
-          disabled={marking || !hasUnread} 
-          className={hasUnread ? "opacity-100" : "opacity-40"}
-        >
-          {marking ? (
-             <ActivityIndicator size="small" color="#0369A1" />
-          ) : (
-            <IconSymbol name="checkmark.circle.fill" size={24} color="#0369A1" />
-          )}
-        </TouchableOpacity>
+        <View className="flex-row items-center gap-3">
+          <TouchableOpacity 
+            onPress={clearAll} 
+            disabled={marking || notifications.length === 0} 
+            className={notifications.length > 0 ? "opacity-100" : "opacity-40"}
+          >
+            <IconSymbol name="trash.fill" size={20} color="#ef4444" />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            onPress={markAllAsRead} 
+            disabled={marking || !hasUnread} 
+            className={hasUnread ? "opacity-100" : "opacity-40"}
+          >
+            {marking ? (
+               <ActivityIndicator size="small" color="#0369A1" />
+            ) : (
+              <IconSymbol name="checkmark.circle.fill" size={24} color="#0369A1" />
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView 
