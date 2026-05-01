@@ -44,3 +44,6 @@ app-example
 
 # graphify
 graphify-out/
+
+# AI skills
+.agent/
