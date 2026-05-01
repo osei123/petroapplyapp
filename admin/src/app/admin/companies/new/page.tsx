@@ -19,6 +19,7 @@ export default function NewCompanyPage() {
     headquarters: "",
     industry_segment: "",
     description: "",
+    status: "active",
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -47,6 +48,7 @@ export default function NewCompanyPage() {
           headquarters: formData.headquarters,
           industry_segment: formData.industry_segment,
           description: formData.description,
+          status: formData.status,
           logo_url: "https://via.placeholder.com/150", 
         },
       ])
@@ -116,7 +118,7 @@ export default function NewCompanyPage() {
                 />
               </div>
 
-              <div className="sm:col-span-2">
+              <div className="sm:col-span-1">
                 <Label htmlFor="industry_segment">Industry Segment</Label>
                 <Input 
                   id="industry_segment" 
@@ -125,6 +127,20 @@ export default function NewCompanyPage() {
                   placeholder="e.g. Oilfield Services" 
                   className="mt-1.5" 
                 />
+              </div>
+
+              <div className="sm:col-span-1">
+                <Label htmlFor="status">Status</Label>
+                <select
+                  id="status"
+                  value={formData.status}
+                  onChange={handleChange as any}
+                  className="flex h-11 w-full rounded-2xl border border-input bg-transparent px-4 py-2 text-sm shadow-sm mt-1.5"
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                  <option value="archived">Archived</option>
+                </select>
               </div>
             </div>
 

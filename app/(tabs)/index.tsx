@@ -46,6 +46,7 @@ export default function HomeScreen() {
       const { data: companiesData } = await supabase
         .from('companies')
         .select('*')
+        .eq('status', 'active')
         .order('job_count', { ascending: false })
         .limit(4);
 

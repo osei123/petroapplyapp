@@ -19,6 +19,7 @@ export default function CompanyDetailScreen() {
         .from('companies')
         .select('*')
         .eq('id', id)
+        .eq('status', 'active')
         .single();
       
       if (companyData) {

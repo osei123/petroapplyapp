@@ -33,7 +33,7 @@ export default function NewJobPage() {
 
   useEffect(() => {
     async function fetchCompanies() {
-      const { data, error } = await supabase.from("companies").select("id, name").order("name");
+      const { data, error } = await supabase.from("companies").select("id, name").eq("status", "active").order("name");
       if (data) setCompanies(data);
       setFetchingCompanies(false);
     }
