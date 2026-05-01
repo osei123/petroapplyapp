@@ -1,13 +1,13 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, MapPin, Calendar, DollarSign, Pencil, ExternalLink } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { jobs, applications } from "@/lib/mock-data";
+import { supabase } from "@/lib/supabase/client";
 
 const statusBadgeVariant: Record<string, "default" | "secondary" | "destructive" | "success" | "warning" | "outline"> = {
   submitted: "secondary",
@@ -21,7 +21,43 @@ const statusBadgeVariant: Record<string, "default" | "secondary" | "destructive"
 export default function JobDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const job = jobs.find((j) => j.id === params.id);
+  const [job, setJob] = useState<any>(null);
+  const [jobApps, setJobApps] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadData() {
+      const { data: jobData } = await supabase
+        .from("jobs")
+        .select("*, companies(name)")
+        .eq("id", params.id)
+        .single();
+        
+      if (jobData) {
+        setJob({ ...jobData, companyName: jobData.companies?.name || "Unknown" });
+      }
+
+      const { data: appsData } = await supabase
+        .from("applications")
+        .select("*, user_profiles(full_name, email)")
+        .eq("job_id", params.id);
+
+      if (appsData) {
+        setJobApps(appsData.map(a => ({
+          ...a,
+          userName: a.user_profiles?.full_name || "Unknown User",
+          userEmail: a.user_profiles?.email || "No email"
+        })));
+      }
+      
+      setLoading(false);
+    }
+    loadData();
+  }, [params.id]);
+
+  if (loading) {
+    return <div className="flex justify-center py-20 text-slate-500">Loading job details...</div>;
+  }
 
   if (!job) {
     return (
@@ -31,8 +67,6 @@ export default function JobDetailPage() {
       </div>
     );
   }
-
-  const jobApps = applications.filter((a) => a.jobId === job.id);
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -46,14 +80,14 @@ export default function JobDetailPage() {
             <div>
               <div className="flex items-center gap-2 mb-2">
                 {job.featured && <Badge>Featured</Badge>}
-                <Badge variant={job.status === "published" ? "success" : "secondary"} className="capitalize">{job.status}</Badge>
+                <Badge variant={job.status === "published" ? "success" : "secondary"} className="capitalize">{job.status || "published"}</Badge>
               </div>
               <h2 className="text-xl font-bold text-slate-900">{job.title}</h2>
               <p className="text-sm text-slate-500 mt-1">{job.companyName}</p>
               <div className="flex flex-wrap gap-4 mt-3 text-sm text-slate-500">
-                <span className="flex items-center gap-1"><MapPin size={14} />{job.location}</span>
-                <span className="flex items-center gap-1"><Calendar size={14} />Deadline: {job.deadline}</span>
-                <span className="flex items-center gap-1"><DollarSign size={14} />{job.salaryRange}</span>
+                <span className="flex items-center gap-1"><MapPin size={14} />{job.location || "Remote"}</span>
+                {job.deadline && <span className="flex items-center gap-1"><Calendar size={14} />Deadline: {job.deadline}</span>}
+                {job.salary_range && <span className="flex items-center gap-1"><DollarSign size={14} />{job.salary_range}</span>}
               </div>
             </div>
             <Link href={`/admin/jobs/${job.id}/edit`}>
@@ -67,13 +101,17 @@ export default function JobDetailPage() {
         <Card className="lg:col-span-2">
           <CardHeader><CardTitle className="text-base">Description</CardTitle></CardHeader>
           <CardContent>
-            <p className="text-sm text-slate-600 leading-relaxed">{job.description}</p>
-            <h4 className="font-semibold text-sm text-slate-900 mt-6 mb-2">Requirements</h4>
-            <ul className="list-disc list-inside space-y-1">
-              {job.requirements.map((r, i) => (
-                <li key={i} className="text-sm text-slate-600">{r}</li>
-              ))}
-            </ul>
+            <p className="text-sm text-slate-600 leading-relaxed">{job.description || "No description provided."}</p>
+            {job.requirements && job.requirements.length > 0 && (
+              <>
+                <h4 className="font-semibold text-sm text-slate-900 mt-6 mb-2">Requirements</h4>
+                <ul className="list-disc list-inside space-y-1">
+                  {job.requirements.map((r: string, i: number) => (
+                    <li key={i} className="text-sm text-slate-600">{r}</li>
+                  ))}
+                </ul>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -81,25 +119,17 @@ export default function JobDetailPage() {
           <CardHeader><CardTitle className="text-base">Details</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             {[
-              { label: "Employment", value: job.employmentType },
-              { label: "Work Mode", value: job.remoteType },
-              { label: "Experience", value: job.experienceLevel },
-              { label: "Application Mode", value: job.applicationMode },
-              { label: "Published", value: job.publishedAt || "Not published" },
+              { label: "Employment", value: job.employment_type },
+              { label: "Work Mode", value: job.remote_type },
+              { label: "Experience", value: job.experience_level },
+              { label: "Application Mode", value: job.application_mode },
+              { label: "Published", value: job.posted_date || new Date(job.created_at).toLocaleDateString() },
             ].map((item) => (
               <div key={item.label}>
                 <p className="text-xs text-slate-400 uppercase tracking-wider">{item.label}</p>
-                <p className="text-sm text-slate-700 capitalize mt-0.5">{item.value.replace("-", " ").replace("_", " ")}</p>
+                <p className="text-sm text-slate-700 capitalize mt-0.5">{item.value ? item.value.replace("-", " ").replace("_", " ") : "N/A"}</p>
               </div>
             ))}
-            {job.externalApplyUrl && (
-              <div>
-                <p className="text-xs text-slate-400 uppercase tracking-wider">External Link</p>
-                <a href={job.externalApplyUrl} className="text-sm text-sky-600 hover:underline flex items-center gap-1 mt-0.5">
-                  Apply Externally <ExternalLink size={12} />
-                </a>
-              </div>
-            )}
           </CardContent>
         </Card>
       </div>
@@ -118,7 +148,7 @@ export default function JobDetailPage() {
                 <div key={app.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-50">
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center text-sm font-bold text-slate-600">
-                      {app.userName.split(" ").map((n: string) => n[0]).join("")}
+                      {app.userName.split(" ").map((n: string) => n[0]).join("").substring(0, 2).toUpperCase()}
                     </div>
                     <div>
                       <p className="font-semibold text-sm text-slate-900">{app.userName}</p>

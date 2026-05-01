@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { Plus, Search, Eye, Pencil, Copy, Archive } from "lucide-react";
+import { Plus, Search, Eye, Pencil, Copy, Trash } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,32 +18,45 @@ export default function JobsPage() {
   const [jobs, setJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  React.useEffect(() => {
-    async function fetchJobs() {
-      const { data } = await supabase
-        .from('jobs')
-        .select('*, companies(name)')
-        .order('created_at', { ascending: false });
-        
-      if (data) {
-        const formatted = data.map((j: any) => ({
-          ...j,
-          companyName: j.companies?.name || 'Unknown',
-          status: 'published' // Default status since schema lacks strict status field currently
-        }));
-        setJobs(formatted);
-      }
-      setLoading(false);
+  const fetchJobs = async () => {
+    const { data } = await supabase
+      .from('jobs')
+      .select('*, companies(name)')
+      .order('created_at', { ascending: false });
+      
+    if (data) {
+      const formatted = data.map((j: any) => ({
+        ...j,
+        companyName: j.companies?.name || 'Unknown',
+        status: j.status || 'published'
+      }));
+      setJobs(formatted);
     }
+    setLoading(false);
+  };
+
+  React.useEffect(() => {
     fetchJobs();
   }, []);
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm("Are you sure you want to archive this job?")) return;
+    
+    setJobs((prev) => prev.map((j) => j.id === id ? { ...j, status: "archived" } : j));
+    
+    const { error } = await supabase.from("jobs").update({ status: "archived" }).eq("id", id);
+    if (error) {
+      alert("Failed to archive job: " + error.message);
+      fetchJobs();
+    }
+  };
 
   const filtered = jobs.filter((j) => {
     const matchesSearch =
       j.title?.toLowerCase().includes(search.toLowerCase()) ||
       j.companyName?.toLowerCase().includes(search.toLowerCase()) ||
       j.location?.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = statusFilter === "all" || j.status === statusFilter;
+    const matchesStatus = statusFilter === "all" ? j.status !== "archived" : j.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
@@ -135,6 +148,9 @@ export default function JobsPage() {
                       <Button variant="ghost" size="icon" className="h-8 w-8"><Pencil size={14} /></Button>
                     </Link>
                     <Button variant="ghost" size="icon" className="h-8 w-8"><Copy size={14} /></Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => handleDelete(j.id)}>
+                      <Trash size={14} />
+                    </Button>
                   </div>
                 </TableCell>
               </TableRow>

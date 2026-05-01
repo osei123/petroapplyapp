@@ -29,6 +29,7 @@ export default function HomeScreen() {
         .from('jobs')
         .select(`*, companies (name)`)
         .eq('featured', true)
+        .eq('status', 'published')
         .limit(5);
 
       if (featuredData) setFeaturedJobs(featuredData);
@@ -37,6 +38,7 @@ export default function HomeScreen() {
       const { data: recentData } = await supabase
         .from('jobs')
         .select(`*, companies (name)`)
+        .eq('status', 'published')
         .order('created_at', { ascending: false })
         .limit(4);
 

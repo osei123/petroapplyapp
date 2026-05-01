@@ -21,6 +21,7 @@ export default function JobsScreen() {
       const { data, error } = await supabase
         .from('jobs')
         .select(`*, companies (name)`)
+        .eq('status', 'published')
         .order('created_at', { ascending: false });
 
       if (data) setJobs(data);

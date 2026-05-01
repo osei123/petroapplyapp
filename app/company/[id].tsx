@@ -27,7 +27,8 @@ export default function CompanyDetailScreen() {
         const { data: jobsData } = await supabase
           .from('jobs')
           .select('*')
-          .eq('company_id', companyData.id);
+          .eq('company_id', companyData.id)
+          .eq('status', 'published');
         setCompanyJobs(jobsData || []);
       }
       setLoading(false);

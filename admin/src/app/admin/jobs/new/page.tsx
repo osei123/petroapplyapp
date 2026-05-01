@@ -29,6 +29,7 @@ export default function NewJobPage() {
     description: "",
     requirements: "",
     featured: false,
+    status: "published",
   });
 
   useEffect(() => {
@@ -81,6 +82,7 @@ export default function NewJobPage() {
         description: formData.description,
         requirements: reqArray,
         featured: formData.featured,
+        status: formData.status,
         posted_date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
       },
     ])
@@ -184,6 +186,13 @@ export default function NewJobPage() {
                   <option value="internal">Internal</option>
                   <option value="external">External</option>
                   <option value="hybrid">Hybrid</option>
+                </select>
+              </div>
+              <div>
+                <Label htmlFor="status">Status</Label>
+                <select id="status" value={formData.status} onChange={handleChange} className="flex h-11 w-full rounded-2xl border border-input bg-transparent px-4 py-2 text-sm shadow-sm mt-1.5">
+                  <option value="draft">Draft</option>
+                  <option value="published">Published</option>
                 </select>
               </div>
             </div>
