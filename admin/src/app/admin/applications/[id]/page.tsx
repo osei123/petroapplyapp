@@ -141,8 +141,13 @@ export default function ApplicationDetailPage() {
                       size="sm" 
                       className="gap-1 text-sky-600"
                       onClick={async () => {
-                        const { data } = supabase.storage.from("resumes").getPublicUrl(app.resumeUrl);
-                        if (data?.publicUrl) window.open(data.publicUrl, "_blank");
+                        try {
+                          const { data, error } = await supabase.storage.from("resumes").createSignedUrl(app.resumeUrl, 60);
+                          if (error) throw error;
+                          if (data?.signedUrl) window.open(data.signedUrl, "_blank");
+                        } catch (err: any) {
+                          alert("Failed to view resume: " + err.message);
+                        }
                       }}
                     >
                       <FileText size={14} /> View
