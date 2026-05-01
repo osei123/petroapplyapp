@@ -45,6 +45,7 @@ export default function ApplicationsScreen() {
           )
         `)
         .eq('user_id', user.id)
+        .neq('status', 'withdrawn')
         .order('applied_at', { ascending: false });
 
       if (error) throw error;

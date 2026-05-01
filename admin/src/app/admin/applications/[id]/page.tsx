@@ -185,13 +185,13 @@ export default function ApplicationDetailPage() {
                   <p className="text-sm text-slate-700 mt-0.5">{app.appliedAt}</p>
                 </div>
               </div>
-              {app.coverLetter && (
+              {app.coverLetter && app.status !== "withdrawn" && (
                 <div>
                   <p className="text-xs text-slate-400 uppercase tracking-wider mb-2">Cover Letter</p>
                   <div className="bg-slate-50 rounded-xl p-4 text-sm text-slate-600 leading-relaxed">{app.coverLetter}</div>
                 </div>
               )}
-              {app.resumeUrl && (
+              {app.resumeUrl && app.status !== "withdrawn" && (
                 <div>
                   <p className="text-xs text-slate-400 uppercase tracking-wider mb-2">Resume</p>
                   <div className="flex items-center gap-3 bg-slate-50 rounded-xl p-4">
