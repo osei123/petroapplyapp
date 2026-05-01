@@ -23,21 +23,35 @@ export default function CompaniesPage() {
   const [companies, setCompanies] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const loadCompanies = async () => {
+    const { data } = await supabase.from("companies").select("*").order("name");
+    if (data) setCompanies(data);
+    setLoading(false);
+  };
+
   React.useEffect(() => {
-    async function loadCompanies() {
-      const { data } = await supabase.from("companies").select("*").order("name");
-      if (data) setCompanies(data);
-      setLoading(false);
-    }
     loadCompanies();
   }, []);
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm("Are you sure you want to archive this company?")) return;
+    
+    // Optimistically remove from list if you only want to show active/inactive
+    setCompanies((prev) => prev.map((c) => c.id === id ? { ...c, status: "archived" } : c));
+    
+    const { error } = await supabase.from("companies").update({ status: "archived" }).eq("id", id);
+    if (error) {
+      alert("Failed to archive company: " + error.message);
+      loadCompanies();
+    }
+  };
 
   const filtered = companies.filter((c) => {
     const matchesSearch =
       c.name?.toLowerCase().includes(search.toLowerCase()) ||
       c.headquarters?.toLowerCase().includes(search.toLowerCase());
-    const cStatus = 'active'; // Add status column logic if existed in schema
-    const matchesStatus = statusFilter === "all" || cStatus === statusFilter;
+    const cStatus = c.status || 'active';
+    const matchesStatus = statusFilter === "all" ? cStatus !== "archived" : cStatus === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
@@ -128,7 +142,7 @@ export default function CompaniesPage() {
                   </div>
                 </TableCell>
                 <TableCell className="text-slate-600">{company.headquarters}</TableCell>
-                <TableCell className="text-slate-600">{company.industrySegment}</TableCell>
+                <TableCell className="text-slate-600">{company.industry_segment}</TableCell>
                 <TableCell>
                   <div className="flex flex-wrap gap-1">
                     <Badge variant="secondary" className="text-xs">
@@ -137,8 +151,8 @@ export default function CompaniesPage() {
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Badge variant="success" className="capitalize">
-                    Active
+                  <Badge variant={company.status === "archived" ? "secondary" : company.status === "inactive" ? "warning" : "success"} className="capitalize">
+                    {company.status || "active"}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
@@ -153,7 +167,12 @@ export default function CompaniesPage() {
                         <Pencil size={14} />
                       </Button>
                     </Link>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-700">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8 text-red-500 hover:text-red-700"
+                      onClick={() => handleDelete(company.id)}
+                    >
                       <Trash2 size={14} />
                     </Button>
                   </div>

@@ -1,18 +1,56 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { companies } from "@/lib/mock-data";
+import { supabase } from "@/lib/supabase/client";
 
 export default function EditCompanyPage() {
   const params = useParams();
   const router = useRouter();
-  const company = companies.find((c) => c.id === params.id);
+  const [company, setCompany] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    async function loadData() {
+      const { data } = await supabase.from("companies").select("*").eq("id", params.id).single();
+      if (data) setCompany(data);
+      setLoading(false);
+    }
+    loadData();
+  }, [params.id]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    
+    const formData = new FormData(e.target as HTMLFormElement);
+    const updates = {
+      name: formData.get("name"),
+      headquarters: formData.get("headquarters"),
+      industry_segment: formData.get("industry"),
+      status: formData.get("status"),
+      description: formData.get("description"),
+    };
+
+    const { error } = await supabase.from("companies").update(updates).eq("id", params.id);
+    
+    setSaving(false);
+    if (error) {
+      alert("Failed to update company: " + error.message);
+    } else {
+      router.push(`/admin/companies/${params.id}`);
+    }
+  };
+
+  if (loading) {
+    return <div className="flex justify-center py-20 text-slate-500">Loading company details...</div>;
+  }
 
   if (!company) {
     return (
@@ -24,11 +62,6 @@ export default function EditCompanyPage() {
       </div>
     );
   }
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    router.push(`/admin/companies/${company.id}`);
-  };
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -50,29 +83,22 @@ export default function EditCompanyPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <div>
                 <Label htmlFor="name">Company Name *</Label>
-                <Input id="name" defaultValue={company.name} className="mt-1.5" />
-              </div>
-              <div>
-                <Label htmlFor="website">Website</Label>
-                <Input id="website" defaultValue={company.website} className="mt-1.5" />
+                <Input id="name" name="name" defaultValue={company.name} required className="mt-1.5" />
               </div>
               <div>
                 <Label htmlFor="headquarters">Headquarters *</Label>
-                <Input id="headquarters" defaultValue={company.headquarters} className="mt-1.5" />
+                <Input id="headquarters" name="headquarters" defaultValue={company.headquarters || ""} required className="mt-1.5" />
               </div>
               <div>
                 <Label htmlFor="industry">Industry Segment</Label>
-                <Input id="industry" defaultValue={company.industrySegment} className="mt-1.5" />
-              </div>
-              <div>
-                <Label htmlFor="careers_url">Careers URL</Label>
-                <Input id="careers_url" defaultValue={company.careersUrl} className="mt-1.5" />
+                <Input id="industry" name="industry" defaultValue={company.industry_segment || ""} className="mt-1.5" />
               </div>
               <div>
                 <Label htmlFor="status">Status</Label>
                 <select
                   id="status"
-                  defaultValue={company.status}
+                  name="status"
+                  defaultValue={company.status || "active"}
                   className="flex h-11 w-full rounded-2xl border border-input bg-transparent px-4 py-2 text-sm shadow-sm mt-1.5"
                 >
                   <option value="active">Active</option>
@@ -83,23 +109,21 @@ export default function EditCompanyPage() {
             </div>
 
             <div>
-              <Label htmlFor="regions">Regions</Label>
-              <Input id="regions" defaultValue={company.regions.join(", ")} className="mt-1.5" />
-            </div>
-
-            <div>
               <Label htmlFor="description">Description</Label>
               <textarea
                 id="description"
+                name="description"
                 rows={4}
-                defaultValue={company.description}
+                defaultValue={company.description || ""}
                 className="flex w-full rounded-2xl border border-input bg-transparent px-4 py-3 text-sm shadow-sm mt-1.5 resize-none placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               />
             </div>
 
             <div className="flex gap-3 pt-2">
-              <Button type="submit">Save Changes</Button>
-              <Button type="button" variant="outline" onClick={() => router.back()}>
+              <Button type="submit" disabled={saving}>
+                {saving ? "Saving..." : "Save Changes"}
+              </Button>
+              <Button type="button" variant="outline" onClick={() => router.back()} disabled={saving}>
                 Cancel
               </Button>
             </div>
