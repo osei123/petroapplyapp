@@ -13,6 +13,7 @@ const statusColors: Record<string, { bg: string; text: string; dot: string }> = 
   interview: { bg: 'bg-[#e0e7ff]', text: 'text-[#3730a3]', dot: 'bg-[#4f46e5]' },
   rejected: { bg: 'bg-red-100', text: 'text-red-800', dot: 'bg-red-600' },
   hired: { bg: 'bg-green-100', text: 'text-green-800', dot: 'bg-green-600' },
+  withdrawn: { bg: 'bg-slate-200', text: 'text-slate-600', dot: 'bg-slate-400' }
 };
 
 const statusSteps = ['Submitted', 'Under Review', 'Shortlisted', 'Interview', 'Hired'];
@@ -64,7 +65,7 @@ export default function ApplicationDetailScreen() {
           onPress: async () => {
             setWithdrawing(true);
             try {
-              const { error } = await supabase.from('applications').delete().eq('id', id);
+              const { error } = await supabase.from('applications').update({ status: 'withdrawn' }).eq('id', id);
               if (error) throw error;
               Alert.alert("Success", "Your application has been withdrawn.");
               router.back();
@@ -102,6 +103,7 @@ export default function ApplicationDetailScreen() {
   const statusStyle = statusColors[app.status] || statusColors.submitted;
   const currentStepIdx = statusKeys.indexOf(app.status);
   const isRejected = app.status === 'rejected';
+  const isWithdrawn = app.status === 'withdrawn';
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top']}>
@@ -136,52 +138,62 @@ export default function ApplicationDetailScreen() {
         </Card>
 
         {/* Progress Timeline */}
-        <Card className="mt-6 p-6">
-          <Text className="text-lg font-outfit-b text-foreground mb-6">Application Progress</Text>
-          
-          {statusSteps.map((step, i) => {
-            const isComplete = !isRejected && i <= currentStepIdx;
-            const isCurrent = !isRejected && i === currentStepIdx;
+        {!isWithdrawn && (
+          <Card className="mt-6 p-6">
+            <Text className="text-lg font-outfit-b text-foreground mb-6">Application Progress</Text>
             
-            let dotClass = 'bg-border';
-            let lineClass = 'bg-border';
-            let textClass = 'text-foreground/50';
-            
-            if (isRejected) {
-              dotClass = 'bg-red-500';
-              textClass = 'text-red-600';
-            } else if (isComplete) {
-              dotClass = 'bg-primary';
-              textClass = 'text-foreground font-outfit-sb';
-              if (i < currentStepIdx) {
-                lineClass = 'bg-primary';
+            {statusSteps.map((step, i) => {
+              const isComplete = !isRejected && i <= currentStepIdx;
+              const isCurrent = !isRejected && i === currentStepIdx;
+              
+              let dotClass = 'bg-border';
+              let lineClass = 'bg-border';
+              let textClass = 'text-foreground/50';
+              
+              if (isRejected) {
+                dotClass = 'bg-red-500';
+                textClass = 'text-red-600';
+              } else if (isComplete) {
+                dotClass = 'bg-primary';
+                textClass = 'text-foreground font-outfit-sb';
+                if (i < currentStepIdx) {
+                  lineClass = 'bg-primary';
+                }
               }
-            }
 
-            return (
-              <View key={step} className="flex-row gap-4">
-                <View className="items-center w-5">
-                  <View className={`w-3.5 h-3.5 rounded-full ${dotClass} ${isCurrent ? 'border-4 border-primary/20 scale-125' : ''}`} />
-                  {i < statusSteps.length - 1 && (
-                    <View className={`w-0.5 h-10 my-1 ${lineClass}`} />
-                  )}
+              return (
+                <View key={step} className="flex-row gap-4">
+                  <View className="items-center w-5">
+                    <View className={`w-3.5 h-3.5 rounded-full ${dotClass} ${isCurrent ? 'border-4 border-primary/20 scale-125' : ''}`} />
+                    {i < statusSteps.length - 1 && (
+                      <View className={`w-0.5 h-10 my-1 ${lineClass}`} />
+                    )}
+                  </View>
+                  <View className="flex-1 pb-6 -mt-1">
+                    <Text className={`text-base font-work-sans ${textClass}`}>{step}</Text>
+                    {isCurrent && <Text className="text-xs font-outfit-sb text-primary mt-1">Current stage</Text>}
+                  </View>
                 </View>
-                <View className="flex-1 pb-6 -mt-1">
-                  <Text className={`text-base font-work-sans ${textClass}`}>{step}</Text>
-                  {isCurrent && <Text className="text-xs font-outfit-sb text-primary mt-1">Current stage</Text>}
-                </View>
+              );
+            })}
+            
+            {isRejected && (
+              <View className="mt-4 bg-red-50 p-4 rounded-xl border border-red-100">
+                <Text className="text-sm font-work-sans text-red-800 leading-relaxed">
+                  Unfortunately, your application was not selected. Don't give up — keep applying!
+                </Text>
               </View>
-            );
-          })}
-          
-          {isRejected && (
-            <View className="mt-4 bg-red-50 p-4 rounded-xl border border-red-100">
-              <Text className="text-sm font-work-sans text-red-800 leading-relaxed">
-                Unfortunately, your application was not selected. Don't give up — keep applying!
-              </Text>
-            </View>
-          )}
-        </Card>
+            )}
+          </Card>
+        )}
+
+        {isWithdrawn && (
+          <Card className="mt-6 p-6 bg-slate-50 border border-border">
+            <Text className="text-sm font-work-sans text-slate-700 leading-relaxed text-center">
+              You have withdrawn this application.
+            </Text>
+          </Card>
+        )}
 
         {/* Actions */}
         <Card className="mt-6 p-0 overflow-hidden">

@@ -18,6 +18,7 @@ export default function JobDetailScreen() {
   const [savingBookmark, setSavingBookmark] = useState(false);
   const [applying, setApplying] = useState(false);
   const [hasApplied, setHasApplied] = useState(false);
+  const [existingAppId, setExistingAppId] = useState<string | null>(null);
 
   // Modal states
   const [modalVisible, setModalVisible] = useState(false);
@@ -51,12 +52,19 @@ export default function JobDetailScreen() {
           // Check if user already applied
           const { data: appData } = await supabase
             .from('applications')
-            .select('id')
+            .select('id, status')
             .eq('user_id', user.id)
             .eq('job_id', id)
             .maybeSingle();
           
-          setHasApplied(!!appData);
+          if (appData) {
+            if (appData.status === 'withdrawn') {
+              setHasApplied(false);
+              setExistingAppId(appData.id);
+            } else {
+              setHasApplied(true);
+            }
+          }
         }
       } catch (e) {
         console.error(e);
@@ -174,17 +182,32 @@ export default function JobDetailScreen() {
     const selectedResume = userDocs.find(d => d.id === selectedResumeId);
 
     try {
-      const { error } = await supabase
-        .from('applications')
-        .insert({
-          user_id: user?.id,
-          job_id: id,
-          status: 'submitted',
-          resume_url: selectedResume.file_url,
-          cover_letter_text: coverLetter.trim() || null,
-        });
+      let dbError;
+      if (existingAppId) {
+        const { error } = await supabase
+          .from('applications')
+          .update({
+            status: 'submitted',
+            resume_url: selectedResume.file_url,
+            cover_letter_text: coverLetter.trim() || null,
+            applied_at: new Date().toISOString()
+          })
+          .eq('id', existingAppId);
+        dbError = error;
+      } else {
+        const { error } = await supabase
+          .from('applications')
+          .insert({
+            user_id: user?.id,
+            job_id: id,
+            status: 'submitted',
+            resume_url: selectedResume.file_url,
+            cover_letter_text: coverLetter.trim() || null,
+          });
+        dbError = error;
+      }
 
-      if (error) throw error;
+      if (dbError) throw dbError;
       setHasApplied(true);
       setModalVisible(false);
       Alert.alert('Success!', 'Your application has been submitted successfully.');

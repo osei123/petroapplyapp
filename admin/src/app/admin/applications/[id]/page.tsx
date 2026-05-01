@@ -10,9 +10,9 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/lib/supabase/client";
 
 const statusBadgeVariant: Record<string, "default" | "secondary" | "destructive" | "success" | "warning" | "outline"> = {
-  submitted: "secondary", under_review: "default", shortlisted: "warning", interview: "outline", rejected: "destructive", hired: "success",
+  submitted: "secondary", under_review: "default", shortlisted: "warning", interview: "outline", rejected: "destructive", hired: "success", withdrawn: "outline",
 };
-const allStatuses = ["submitted", "under_review", "shortlisted", "interview", "rejected", "hired"];
+const allStatuses = ["submitted", "under_review", "shortlisted", "interview", "rejected", "hired", "withdrawn"];
 
 export default function ApplicationDetailPage() {
   const params = useParams();
