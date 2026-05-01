@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors, Spacing, BorderRadius, FontSize } from '@/constants/theme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { Card } from '@/components/Card';
 
 export default function SavedScreen() {
   const router = useRouter();
@@ -59,27 +59,38 @@ export default function SavedScreen() {
     fetchSavedJobs();
   }, [user]);
 
+  const removeBookmark = async (savedId: string) => {
+    // Optimistically update
+    setSavedJobs(prev => prev.filter(job => job.id !== savedId));
+    try {
+      await supabase.from('saved_jobs').delete().eq('id', savedId);
+    } catch (err) {
+      console.error(err);
+      fetchSavedJobs(); // Re-fetch on error
+    }
+  };
+
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Saved Jobs</Text>
-        <Text style={styles.subtitle}>{savedJobs.length} jobs saved</Text>
+    <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+      <View className="px-6 pt-6 pb-2">
+        <Text className="text-2xl font-outfit-b text-foreground">Saved Jobs</Text>
+        <Text className="text-sm font-work-sans text-foreground/70 mt-1">{savedJobs.length} jobs saved</Text>
       </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.list}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.light.primary} />}
+        contentContainerStyle={{ padding: 24, gap: 16, paddingBottom: 100, flexGrow: 1 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0369A1" />}
       >
         {loading && !refreshing ? (
-          <View style={[styles.emptyState, { paddingVertical: 60 }]}>
-            <ActivityIndicator size="large" color={Colors.light.primary} />
+          <View className="flex-1 items-center justify-center py-16">
+            <ActivityIndicator size="large" color="#0369A1" />
           </View>
         ) : savedJobs.length === 0 ? (
-          <View style={styles.emptyState}>
-            <IconSymbol name="bookmark.fill" size={48} color={Colors.light.border} />
-            <Text style={styles.emptyTitle}>No saved jobs yet</Text>
-            <Text style={styles.emptyText}>Save jobs you're interested in to review later</Text>
+          <View className="flex-1 items-center justify-center gap-2 py-20">
+            <IconSymbol name="bookmark.fill" size={48} color="#bae6fd" />
+            <Text className="text-xl font-outfit-b text-foreground mt-4">No saved jobs yet</Text>
+            <Text className="text-sm font-work-sans text-foreground/70 text-center">Save jobs you're interested in to review later</Text>
           </View>
         ) : (
           savedJobs.map((saved) => {
@@ -90,44 +101,57 @@ export default function SavedScreen() {
             const savedDate = new Date(saved.saved_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
             return (
-              <TouchableOpacity key={saved.id} style={styles.card} onPress={() => router.push(`/job/${job.id}` as any)} activeOpacity={0.7}>
-                <View style={styles.cardTop}>
-                  <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>{companyName.substring(0, 2).toUpperCase()}</Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.cardTitle} numberOfLines={1}>{job.title}</Text>
-                    <Text style={styles.cardSub}>{companyName}</Text>
-                  </View>
-                  <TouchableOpacity style={styles.bookmarkBtn}>
-                    <IconSymbol name="bookmark.fill" size={20} color={Colors.light.primary} />
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.cardMeta}>
-                  {job.location && (
-                    <View style={styles.metaItem}>
-                      <IconSymbol name="location.fill" size={13} color={Colors.light.textTertiary} />
-                      <Text style={styles.metaText}>{job.location}</Text>
+              <TouchableOpacity key={saved.id} onPress={() => router.push(`/job/${job.id}` as any)} activeOpacity={0.7}>
+                <Card className="p-5">
+                  <View className="flex-row items-center gap-4">
+                    <View className="w-11 h-11 rounded-lg bg-muted items-center justify-center border border-border">
+                      <Text className="text-sm font-outfit-b text-foreground">{companyName.substring(0, 2).toUpperCase()}</Text>
                     </View>
-                  )}
-                  {job.deadline && (
-                    <View style={styles.metaItem}>
-                      <IconSymbol name="clock.fill" size={13} color={Colors.light.textTertiary} />
-                      <Text style={styles.metaText}>Deadline: {new Date(job.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</Text>
+                    <View className="flex-1">
+                      <Text className="text-base font-outfit-sb text-foreground" numberOfLines={1}>{job.title}</Text>
+                      <Text className="text-sm font-work-sans text-foreground/70 mt-1">{companyName}</Text>
                     </View>
-                  )}
-                </View>
-
-                <View style={styles.cardFooter}>
-                  <View style={styles.tags}>
-                    {job.employment_type && <View style={styles.tag}><Text style={styles.tagText}>{job.employment_type}</Text></View>}
-                    {job.remote_type && <View style={styles.tag}><Text style={styles.tagText}>{job.remote_type}</Text></View>}
+                    <TouchableOpacity 
+                      className="w-10 h-10 rounded-full bg-primary/10 items-center justify-center"
+                      onPress={() => removeBookmark(saved.id)}
+                    >
+                      <IconSymbol name="bookmark.fill" size={20} color="#0369A1" />
+                    </TouchableOpacity>
                   </View>
-                  {job.salary_range && <Text style={styles.salary}>{job.salary_range}</Text>}
-                </View>
 
-                <Text style={styles.savedAt}>Saved {savedDate}</Text>
+                  <View className="flex-row gap-6 mt-4">
+                    {job.location && (
+                      <View className="flex-row items-center gap-1.5">
+                        <IconSymbol name="location.fill" size={13} color="#0C4A6E80" />
+                        <Text className="text-xs font-work-sans text-foreground/70">{job.location}</Text>
+                      </View>
+                    )}
+                    {job.deadline && (
+                      <View className="flex-row items-center gap-1.5">
+                        <IconSymbol name="clock.fill" size={13} color="#0C4A6E80" />
+                        <Text className="text-xs font-work-sans text-foreground/70">Deadline: {new Date(job.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</Text>
+                      </View>
+                    )}
+                  </View>
+
+                  <View className="flex-row justify-between items-center mt-5 pb-4 border-b border-border">
+                    <View className="flex-row gap-2">
+                      {job.employment_type && (
+                        <View className="bg-muted px-2.5 py-1 rounded-full">
+                          <Text className="text-xs font-work-sans-md text-foreground capitalize">{job.employment_type}</Text>
+                        </View>
+                      )}
+                      {job.remote_type && (
+                        <View className="bg-muted px-2.5 py-1 rounded-full">
+                          <Text className="text-xs font-work-sans-md text-foreground capitalize">{job.remote_type}</Text>
+                        </View>
+                      )}
+                    </View>
+                    {job.salary_range && <Text className="text-sm font-outfit-b text-primary">{job.salary_range}</Text>}
+                  </View>
+
+                  <Text className="text-xs font-work-sans text-foreground/60 mt-4">Saved {savedDate}</Text>
+                </Card>
               </TouchableOpacity>
             );
           })
@@ -136,30 +160,3 @@ export default function SavedScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.light.background },
-  header: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.lg, paddingBottom: Spacing.sm },
-  title: { fontSize: FontSize.xl, fontWeight: '700', color: Colors.light.text },
-  subtitle: { fontSize: FontSize.sm, color: Colors.light.textSecondary, marginTop: 2 },
-  list: { padding: Spacing.xl, gap: Spacing.md, paddingBottom: 30, flexGrow: 1 },
-  emptyState: { alignItems: 'center', paddingVertical: 80, gap: Spacing.sm },
-  emptyTitle: { fontSize: FontSize.lg, fontWeight: '700', color: Colors.light.text },
-  emptyText: { fontSize: FontSize.sm, color: Colors.light.textTertiary, textAlign: 'center' },
-  card: { backgroundColor: Colors.light.surface, borderRadius: BorderRadius.xl, padding: Spacing.lg, borderWidth: 1, borderColor: Colors.light.border },
-  cardTop: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
-  avatar: { width: 44, height: 44, borderRadius: BorderRadius.lg, backgroundColor: Colors.light.surfaceHover, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontSize: FontSize.sm, fontWeight: '700', color: Colors.light.textSecondary },
-  cardTitle: { fontSize: FontSize.md, fontWeight: '700', color: Colors.light.text },
-  cardSub: { fontSize: FontSize.sm, color: Colors.light.textSecondary, marginTop: 1 },
-  bookmarkBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.light.primaryLight, alignItems: 'center', justifyContent: 'center' },
-  cardMeta: { flexDirection: 'row', gap: Spacing.lg, marginTop: Spacing.md },
-  metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  metaText: { fontSize: FontSize.xs, color: Colors.light.textTertiary },
-  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: Spacing.md },
-  tags: { flexDirection: 'row', gap: Spacing.sm },
-  tag: { backgroundColor: Colors.light.surfaceHover, paddingHorizontal: 10, paddingVertical: 4, borderRadius: BorderRadius.full },
-  tagText: { fontSize: FontSize.xs, color: Colors.light.textSecondary, textTransform: 'capitalize' },
-  salary: { fontSize: FontSize.md, fontWeight: '700', color: Colors.light.primary },
-  savedAt: { fontSize: FontSize.xs, color: Colors.light.textTertiary, marginTop: Spacing.md, borderTopWidth: 1, borderTopColor: Colors.light.borderLight, paddingTop: Spacing.md },
-});

@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
-import { Colors, Spacing, BorderRadius, FontSize } from '@/constants/theme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
 export default function LoginScreen() {
@@ -44,30 +43,29 @@ export default function LoginScreen() {
     if (error) {
       Alert.alert('Sign Up Error', error.message);
     } else {
-      // Navigate to OTP confirmation screen
       router.push({ pathname: '/(auth)/confirm', params: { email } } as any);
     }
     setLoading(false);
   }
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
-      <View style={styles.content}>
-        <View style={styles.header}>
-          <View style={styles.logoContainer}>
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1 bg-background">
+      <View className="flex-1 justify-center px-6">
+        <View className="items-center mb-10">
+          <View className="w-16 h-16 rounded-2xl bg-primary items-center justify-center mb-6 shadow-sm">
             <IconSymbol name="drop.fill" size={32} color="#fff" />
           </View>
-          <Text style={styles.title}>PetroApply</Text>
-          <Text style={styles.subtitle}>Sign in to your student account</Text>
+          <Text className="text-3xl font-outfit-b text-foreground mb-2">PetroApply</Text>
+          <Text className="text-base font-work-sans text-foreground/70">Sign in to your student account</Text>
         </View>
 
-        <View style={styles.form}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Email Address</Text>
+        <View className="gap-5">
+          <View className="gap-2">
+            <Text className="text-sm font-outfit-sb text-foreground/80 ml-1">Email Address</Text>
             <TextInput
-              style={styles.input}
+              className="bg-white border-2 border-border rounded-xl px-4 py-3.5 text-base font-work-sans text-foreground shadow-sm"
               placeholder="student@university.edu"
-              placeholderTextColor={Colors.light.textTertiary}
+              placeholderTextColor="#0C4A6E80"
               value={email}
               onChangeText={setEmail}
               autoCapitalize="none"
@@ -75,12 +73,12 @@ export default function LoginScreen() {
             />
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Password</Text>
+          <View className="gap-2">
+            <Text className="text-sm font-outfit-sb text-foreground/80 ml-1">Password</Text>
             <TextInput
-              style={styles.input}
+              className="bg-white border-2 border-border rounded-xl px-4 py-3.5 text-base font-work-sans text-foreground shadow-sm"
               placeholder="••••••••"
-              placeholderTextColor={Colors.light.textTertiary}
+              placeholderTextColor="#0C4A6E80"
               value={password}
               onChangeText={setPassword}
               secureTextEntry
@@ -88,38 +86,29 @@ export default function LoginScreen() {
           </View>
           
           <TouchableOpacity 
-            style={{ alignItems: 'flex-end', marginTop: -8 }} 
+            className="items-end -mt-1" 
             onPress={() => router.push('/(auth)/reset-password' as any)}
           >
-            <Text style={{ fontSize: FontSize.sm, color: Colors.light.primary, fontWeight: '600' }}>Forgot Password?</Text>
+            <Text className="text-sm font-outfit-b text-primary">Forgot Password?</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.button} onPress={signInWithEmail} disabled={loading}>
-            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Sign In</Text>}
+          <TouchableOpacity 
+            className="bg-primary py-4 rounded-xl items-center mt-2 shadow-sm" 
+            onPress={signInWithEmail} 
+            disabled={loading}
+          >
+            {loading ? <ActivityIndicator color="#fff" /> : <Text className="text-white text-base font-outfit-b">Sign In</Text>}
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.button, styles.buttonSecondary]} onPress={signUpWithEmail} disabled={loading}>
-            <Text style={styles.buttonTextSecondary}>Create Account</Text>
+          <TouchableOpacity 
+            className="bg-transparent border-2 border-primary py-4 rounded-xl items-center mt-1" 
+            onPress={signUpWithEmail} 
+            disabled={loading}
+          >
+            <Text className="text-primary text-base font-outfit-b">Create Account</Text>
           </TouchableOpacity>
         </View>
       </View>
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.light.background },
-  content: { flex: 1, justifyContent: 'center', padding: Spacing.xl },
-  header: { alignItems: 'center', marginBottom: Spacing.xxxl },
-  logoContainer: { width: 64, height: 64, borderRadius: 20, backgroundColor: Colors.light.primary, alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.lg },
-  title: { fontSize: FontSize.xxl, fontWeight: '800', color: Colors.light.text, marginBottom: Spacing.xs },
-  subtitle: { fontSize: FontSize.md, color: Colors.light.textSecondary },
-  form: { gap: Spacing.lg },
-  inputGroup: { gap: Spacing.xs },
-  label: { fontSize: FontSize.sm, fontWeight: '600', color: Colors.light.textSecondary, marginLeft: Spacing.xs },
-  input: { backgroundColor: Colors.light.surface, borderWidth: 1, borderColor: Colors.light.border, borderRadius: BorderRadius.lg, padding: Spacing.md, fontSize: FontSize.md, color: Colors.light.text },
-  button: { backgroundColor: Colors.light.primary, padding: Spacing.lg, borderRadius: BorderRadius.lg, alignItems: 'center', marginTop: Spacing.md },
-  buttonText: { color: '#fff', fontSize: FontSize.md, fontWeight: 'bold' },
-  buttonSecondary: { backgroundColor: 'transparent', borderWidth: 1, borderColor: Colors.light.primary, marginTop: Spacing.sm },
-  buttonTextSecondary: { color: Colors.light.primary, fontSize: FontSize.md, fontWeight: 'bold' },
-});

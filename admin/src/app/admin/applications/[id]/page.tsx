@@ -135,11 +135,43 @@ export default function ApplicationDetailPage() {
                 <div className="flex items-center gap-3 bg-slate-50 rounded-xl p-4">
                   <FileText size={20} className="text-sky-500" />
                   <span className="text-sm text-slate-700 flex-1">{app.resumeUrl.split("/").pop() || "Resume File"}</span>
-                  <a href={app.resumeUrl} target="_blank" rel="noopener noreferrer">
-                    <Button variant="ghost" size="sm" className="gap-1 text-sky-600">
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="gap-1 text-sky-600"
+                      onClick={async () => {
+                        const { data } = supabase.storage.from("resumes").getPublicUrl(app.resumeUrl);
+                        if (data?.publicUrl) window.open(data.publicUrl, "_blank");
+                      }}
+                    >
+                      <FileText size={14} /> View
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="gap-1 text-sky-600"
+                      onClick={async () => {
+                        try {
+                          const { data, error } = await supabase.storage.from("resumes").download(app.resumeUrl);
+                          if (error) throw error;
+                          const url = URL.createObjectURL(data);
+                          const a = document.createElement("a");
+                          a.href = url;
+                          const ext = app.resumeUrl.split(".").pop() || "pdf";
+                          a.download = `${app.userName} Resume.${ext}`;
+                          document.body.appendChild(a);
+                          a.click();
+                          document.body.removeChild(a);
+                          URL.revokeObjectURL(url);
+                        } catch (err: any) {
+                          alert("Failed to download resume: " + err.message);
+                        }
+                      }}
+                    >
                       <Download size={14} /> Download
                     </Button>
-                  </a>
+                  </div>
                 </div>
               </div>
             )}

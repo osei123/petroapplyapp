@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors, Spacing, BorderRadius, FontSize } from '@/constants/theme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { supabase } from '@/lib/supabase';
+import { Card } from '@/components/Card';
 
-const statusColors: Record<string, { bg: string; text: string }> = {
-  submitted: { bg: Colors.light.surfaceHover, text: Colors.light.textSecondary },
-  under_review: { bg: Colors.light.primaryLight, text: Colors.light.primaryDark },
-  shortlisted: { bg: Colors.light.warningLight, text: '#92400e' },
-  interview: { bg: '#e0e7ff', text: '#3730a3' },
-  rejected: { bg: Colors.light.errorLight, text: '#991b1b' },
-  hired: { bg: Colors.light.successLight, text: '#065f46' },
+const statusColors: Record<string, { bg: string; text: string; dot: string }> = {
+  submitted: { bg: 'bg-muted', text: 'text-foreground/70', dot: 'bg-foreground/50' },
+  under_review: { bg: 'bg-primary/10', text: 'text-primary', dot: 'bg-primary' },
+  shortlisted: { bg: 'bg-[#fef3c7]', text: 'text-[#92400e]', dot: 'bg-[#d97706]' },
+  interview: { bg: 'bg-[#e0e7ff]', text: 'text-[#3730a3]', dot: 'bg-[#4f46e5]' },
+  rejected: { bg: 'bg-red-100', text: 'text-red-800', dot: 'bg-red-600' },
+  hired: { bg: 'bg-green-100', text: 'text-green-800', dot: 'bg-green-600' },
 };
 
 const statusSteps = ['Submitted', 'Under Review', 'Shortlisted', 'Interview', 'Hired'];
@@ -53,16 +53,16 @@ export default function ApplicationDetailScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color={Colors.light.primary} />
+      <SafeAreaView className="flex-1 bg-background justify-center items-center">
+        <ActivityIndicator size="large" color="#0369A1" />
       </SafeAreaView>
     );
   }
 
   if (!app) {
     return (
-      <SafeAreaView style={styles.container}>
-        <Text style={{ padding: 20 }}>Application not found</Text>
+      <SafeAreaView className="flex-1 bg-background justify-center items-center p-6">
+        <Text className="text-lg font-outfit-sb text-foreground">Application not found</Text>
       </SafeAreaView>
     );
   }
@@ -76,107 +76,99 @@ export default function ApplicationDetailScreen() {
   const isRejected = app.status === 'rejected';
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.navBar}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <IconSymbol name="arrow.left" size={20} color={Colors.light.text} />
+    <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+      {/* Navigation Bar */}
+      <View className="flex-row items-center justify-between px-6 py-4">
+        <TouchableOpacity 
+          className="w-10 h-10 rounded-full bg-white border border-border items-center justify-center shadow-sm" 
+          onPress={() => router.back()}
+        >
+          <IconSymbol name="arrow.left" size={20} color="#0C4A6E" />
         </TouchableOpacity>
-        <Text style={styles.navTitle}>Application</Text>
-        <View style={{ width: 40 }} />
+        <Text className="text-lg font-outfit-b text-foreground">Application</Text>
+        <View className="w-10" />
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 24, paddingBottom: 100 }}>
         {/* Header */}
-        <View style={styles.headerCard}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{companyName.substring(0, 2).toUpperCase()}</Text>
+        <Card className="items-center p-8">
+          <View className="w-16 h-16 rounded-2xl bg-muted items-center justify-center mb-4 border border-border">
+            <Text className="text-xl font-outfit-b text-foreground">{companyName.substring(0, 2).toUpperCase()}</Text>
           </View>
-          <Text style={styles.jobTitle}>{jobTitle}</Text>
-          <Text style={styles.companyName}>{companyName}</Text>
-          <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
-            <Text style={[styles.statusText, { color: statusStyle.text }]}>
+          <Text className="text-2xl font-outfit-b text-foreground text-center leading-tight">{jobTitle}</Text>
+          <Text className="text-base font-work-sans text-foreground/70 mt-2">{companyName}</Text>
+          
+          <View className={`px-4 py-2 rounded-full mt-4 ${statusStyle.bg}`}>
+            <Text className={`text-sm font-outfit-b capitalize ${statusStyle.text}`}>
               {app.status.replace('_', ' ')}
             </Text>
           </View>
-          <Text style={styles.appliedDate}>Applied {appliedDate}</Text>
-        </View>
+          
+          <Text className="text-sm font-work-sans text-foreground/50 mt-4">Applied {appliedDate}</Text>
+        </Card>
 
         {/* Progress Timeline */}
-        <View style={styles.timelineCard}>
-          <Text style={styles.timelineTitle}>Application Progress</Text>
+        <Card className="mt-6 p-6">
+          <Text className="text-lg font-outfit-b text-foreground mb-6">Application Progress</Text>
+          
           {statusSteps.map((step, i) => {
             const isComplete = !isRejected && i <= currentStepIdx;
             const isCurrent = !isRejected && i === currentStepIdx;
+            
+            let dotClass = 'bg-border';
+            let lineClass = 'bg-border';
+            let textClass = 'text-foreground/50';
+            
+            if (isRejected) {
+              dotClass = 'bg-red-500';
+              textClass = 'text-red-600';
+            } else if (isComplete) {
+              dotClass = 'bg-primary';
+              textClass = 'text-foreground font-outfit-sb';
+              if (i < currentStepIdx) {
+                lineClass = 'bg-primary';
+              }
+            }
+
             return (
-              <View key={step} style={styles.timelineItem}>
-                <View style={styles.timelineDotContainer}>
-                  <View style={[styles.timelineDot,
-                    isComplete && { backgroundColor: Colors.light.primary },
-                    isRejected && { backgroundColor: Colors.light.error },
-                    isCurrent && { borderWidth: 3, borderColor: Colors.light.primary + '40' },
-                  ]} />
+              <View key={step} className="flex-row gap-4">
+                <View className="items-center w-5">
+                  <View className={`w-3.5 h-3.5 rounded-full ${dotClass} ${isCurrent ? 'border-4 border-primary/20 scale-125' : ''}`} />
                   {i < statusSteps.length - 1 && (
-                    <View style={[styles.timelineLine,
-                      isComplete && i < currentStepIdx && { backgroundColor: Colors.light.primary },
-                    ]} />
+                    <View className={`w-0.5 h-10 my-1 ${lineClass}`} />
                   )}
                 </View>
-                <View style={styles.timelineContent}>
-                  <Text style={[styles.timelineStep,
-                    isComplete && { color: Colors.light.text, fontWeight: '700' },
-                    isRejected && { color: Colors.light.error },
-                  ]}>{step}</Text>
-                  {isCurrent && <Text style={styles.timelineCurrent}>Current stage</Text>}
+                <View className="flex-1 pb-6 -mt-1">
+                  <Text className={`text-base font-work-sans ${textClass}`}>{step}</Text>
+                  {isCurrent && <Text className="text-xs font-outfit-sb text-primary mt-1">Current stage</Text>}
                 </View>
               </View>
             );
           })}
+          
           {isRejected && (
-            <View style={styles.rejectedNote}>
-              <Text style={styles.rejectedText}>Unfortunately, your application was not selected. Don't give up — keep applying!</Text>
+            <View className="mt-4 bg-red-50 p-4 rounded-xl border border-red-100">
+              <Text className="text-sm font-work-sans text-red-800 leading-relaxed">
+                Unfortunately, your application was not selected. Don't give up — keep applying!
+              </Text>
             </View>
           )}
-        </View>
+        </Card>
 
         {/* Actions */}
-        <View style={styles.actionsCard}>
-          <TouchableOpacity style={styles.actionItem} onPress={() => router.push(`/job/${app.job_id}` as any)}>
-            <IconSymbol name="briefcase.fill" size={20} color={Colors.light.primary} />
-            <Text style={styles.actionText}>View Job Details</Text>
-            <IconSymbol name="chevron.right" size={16} color={Colors.light.textTertiary} />
+        <Card className="mt-6 p-0 overflow-hidden">
+          <TouchableOpacity 
+            className="flex-row items-center p-5 gap-4" 
+            onPress={() => router.push(`/job/${app.job_id}` as any)}
+          >
+            <View className="w-10 h-10 rounded-full bg-primary/10 items-center justify-center">
+              <IconSymbol name="briefcase.fill" size={20} color="#0369A1" />
+            </View>
+            <Text className="flex-1 text-base font-outfit-sb text-foreground">View Job Details</Text>
+            <IconSymbol name="chevron.right" size={16} color="#0C4A6E80" />
           </TouchableOpacity>
-        </View>
+        </Card>
       </ScrollView>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.light.background },
-  navBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md },
-  backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: Colors.light.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.light.border },
-  navTitle: { fontSize: FontSize.lg, fontWeight: '700', color: Colors.light.text },
-  content: { paddingHorizontal: Spacing.xl, paddingBottom: 30 },
-  headerCard: { alignItems: 'center', backgroundColor: Colors.light.surface, borderRadius: BorderRadius.xxl, padding: Spacing.xxl, borderWidth: 1, borderColor: Colors.light.border },
-  avatar: { width: 56, height: 56, borderRadius: BorderRadius.xl, backgroundColor: Colors.light.surfaceHover, alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.md },
-  avatarText: { fontSize: FontSize.lg, fontWeight: '700', color: Colors.light.textSecondary },
-  jobTitle: { fontSize: FontSize.xl, fontWeight: '800', color: Colors.light.text, textAlign: 'center' },
-  companyName: { fontSize: FontSize.md, color: Colors.light.textSecondary, marginTop: 4 },
-  statusBadge: { paddingHorizontal: 16, paddingVertical: 6, borderRadius: BorderRadius.full, marginTop: Spacing.md },
-  statusText: { fontSize: FontSize.sm, fontWeight: '700', textTransform: 'capitalize' },
-  appliedDate: { fontSize: FontSize.sm, color: Colors.light.textTertiary, marginTop: Spacing.sm },
-  timelineCard: { backgroundColor: Colors.light.surface, borderRadius: BorderRadius.xxl, padding: Spacing.xxl, marginTop: Spacing.lg, borderWidth: 1, borderColor: Colors.light.border },
-  timelineTitle: { fontSize: FontSize.lg, fontWeight: '700', color: Colors.light.text, marginBottom: Spacing.lg },
-  timelineItem: { flexDirection: 'row', gap: Spacing.md },
-  timelineDotContainer: { alignItems: 'center', width: 20 },
-  timelineDot: { width: 14, height: 14, borderRadius: 7, backgroundColor: Colors.light.border },
-  timelineLine: { width: 2, height: 32, backgroundColor: Colors.light.border, marginVertical: 4 },
-  timelineContent: { flex: 1, paddingBottom: Spacing.lg },
-  timelineStep: { fontSize: FontSize.md, color: Colors.light.textTertiary },
-  timelineCurrent: { fontSize: FontSize.xs, color: Colors.light.primary, fontWeight: '600', marginTop: 2 },
-  rejectedNote: { marginTop: Spacing.md, backgroundColor: Colors.light.errorLight, borderRadius: BorderRadius.lg, padding: Spacing.md },
-  rejectedText: { fontSize: FontSize.sm, color: '#991b1b', lineHeight: 20 },
-  actionsCard: { backgroundColor: Colors.light.surface, borderRadius: BorderRadius.xl, marginTop: Spacing.lg, borderWidth: 1, borderColor: Colors.light.border, overflow: 'hidden' },
-  actionItem: { flexDirection: 'row', alignItems: 'center', padding: Spacing.lg, gap: Spacing.md },
-  actionText: { flex: 1, fontSize: FontSize.md, fontWeight: '600', color: Colors.light.text },
-});

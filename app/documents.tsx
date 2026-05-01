@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as DocumentPicker from 'expo-document-picker';
-import { Colors, Spacing, BorderRadius, FontSize } from '@/constants/theme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { Card } from '@/components/Card';
 
 export default function DocumentsScreen() {
   const router = useRouter();
@@ -71,9 +71,7 @@ export default function DocumentsScreen() {
 
       if (uploadError) throw uploadError;
 
-      if (uploadError) throw uploadError;
-
-      // Save the relative path to the database instead of a dead public URL
+      // Save the relative path to the database
       const { error: dbError } = await supabase.from('documents').insert({
         user_id: user.id,
         filename: file.name,
@@ -101,7 +99,6 @@ export default function DocumentsScreen() {
         style: 'destructive',
         onPress: async () => {
           try {
-            // The file_url now directly stores the filePath
             const filePath = fileUrl.includes('/resumes/') ? fileUrl.split('/resumes/')[1] : fileUrl;
             if (filePath) {
               await supabase.storage.from('resumes').remove([filePath]);
@@ -120,82 +117,83 @@ export default function DocumentsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.navBar}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <IconSymbol name="arrow.left" size={20} color={Colors.light.text} />
+    <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+      {/* Navigation Bar */}
+      <View className="flex-row items-center justify-between px-6 py-4">
+        <TouchableOpacity 
+          className="w-10 h-10 rounded-full bg-white border border-border items-center justify-center shadow-sm" 
+          onPress={() => router.back()}
+        >
+          <IconSymbol name="arrow.left" size={20} color="#0C4A6E" />
         </TouchableOpacity>
-        <Text style={styles.navTitle}>Documents</Text>
+        <Text className="text-lg font-outfit-b text-foreground">Documents</Text>
         <TouchableOpacity
-          style={styles.addBtn}
+          className="w-10 h-10 rounded-full bg-primary/10 items-center justify-center"
           onPress={handleUpload}
           disabled={uploading}
         >
           {uploading ? (
-            <ActivityIndicator size="small" color={Colors.light.primary} />
+            <ActivityIndicator size="small" color="#0369A1" />
           ) : (
-            <IconSymbol name="plus" size={20} color={Colors.light.primary} />
+            <IconSymbol name="plus" size={20} color="#0369A1" />
           )}
         </TouchableOpacity>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 24, paddingBottom: 100, flexGrow: 1 }}>
         {loading ? (
-          <ActivityIndicator size="large" color={Colors.light.primary} style={{ marginTop: 40 }} />
+          <View className="flex-1 justify-center items-center py-10">
+            <ActivityIndicator size="large" color="#0369A1" />
+          </View>
         ) : documents.length === 0 ? (
-          <View style={styles.emptyState}>
-            <View style={styles.emptyIconBg}>
-              <IconSymbol name="doc.text.fill" size={40} color={Colors.light.primary} />
+          <View className="flex-1 justify-center items-center py-20 px-4">
+            <View className="w-20 h-20 rounded-full bg-primary/10 items-center justify-center mb-6">
+              <IconSymbol name="doc.text.fill" size={40} color="#0369A1" />
             </View>
-            <Text style={styles.emptyTitle}>No documents yet</Text>
-            <Text style={styles.emptyText}>Upload your resume to apply for jobs quickly and easily.</Text>
-            <TouchableOpacity style={styles.emptyBtn} onPress={handleUpload}>
-              <Text style={styles.emptyBtnText}>Upload Resume</Text>
+            <Text className="text-xl font-outfit-b text-foreground mb-2 text-center">No documents yet</Text>
+            <Text className="text-base font-work-sans text-foreground/60 text-center leading-relaxed mb-8">
+              Upload your resume to apply for jobs quickly and easily.
+            </Text>
+            <TouchableOpacity 
+              className="bg-primary px-8 py-4 rounded-full shadow-sm flex-row items-center gap-2" 
+              onPress={handleUpload}
+            >
+              <IconSymbol name="arrow.up.doc.fill" size={18} color="#fff" />
+              <Text className="text-white text-base font-outfit-b">Upload Resume</Text>
             </TouchableOpacity>
           </View>
         ) : (
-          <View style={styles.list}>
+          <View className="gap-4">
             {documents.map((doc) => (
-              <View key={doc.id} style={styles.docCard}>
-                <View style={styles.docIcon}>
-                  <IconSymbol name="doc.fill" size={24} color={Colors.light.primary} />
+              <Card key={doc.id} className="flex-row items-center p-4">
+                <View className="w-12 h-12 rounded-xl bg-primary/10 items-center justify-center">
+                  <IconSymbol name="doc.fill" size={24} color="#0369A1" />
                 </View>
-                <View style={styles.docInfo}>
-                  <Text style={styles.docName} numberOfLines={1}>{doc.filename}</Text>
-                  <Text style={styles.docDate}>
+                <View className="flex-1 ml-4 mr-2">
+                  <Text className="text-base font-outfit-sb text-foreground mb-1" numberOfLines={1}>{doc.filename}</Text>
+                  <Text className="text-sm font-work-sans text-foreground/60">
                     {new Date(doc.created_at).toLocaleDateString()} • {doc.type.toUpperCase()}
                   </Text>
                 </View>
-                <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(doc.id, doc.file_url)}>
-                  <IconSymbol name="trash.fill" size={20} color="#ef4444" />
+                <TouchableOpacity 
+                  className="w-10 h-10 rounded-full bg-red-50 items-center justify-center border border-red-100" 
+                  onPress={() => handleDelete(doc.id, doc.file_url)}
+                >
+                  <IconSymbol name="trash.fill" size={18} color="#ef4444" />
                 </TouchableOpacity>
-              </View>
+              </Card>
             ))}
+            
+            <TouchableOpacity 
+              className="mt-4 bg-primary/10 rounded-xl py-5 border-2 border-dashed border-primary/30 items-center justify-center flex-row gap-2"
+              onPress={handleUpload}
+            >
+              <IconSymbol name="plus.circle.fill" size={20} color="#0369A1" />
+              <Text className="text-base font-outfit-sb text-primary">Upload Another File</Text>
+            </TouchableOpacity>
           </View>
         )}
       </ScrollView>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.light.background },
-  navBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md },
-  backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: Colors.light.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.light.border },
-  navTitle: { fontSize: FontSize.lg, fontWeight: '700', color: Colors.light.text },
-  addBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: Colors.light.primaryLight, alignItems: 'center', justifyContent: 'center' },
-  content: { padding: Spacing.xl },
-  emptyState: { alignItems: 'center', justifyContent: 'center', marginTop: 60, padding: Spacing.xl },
-  emptyIconBg: { width: 80, height: 80, borderRadius: 40, backgroundColor: Colors.light.primaryLight, alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.lg },
-  emptyTitle: { fontSize: FontSize.xl, fontWeight: '700', color: Colors.light.text, marginBottom: Spacing.sm },
-  emptyText: { fontSize: FontSize.md, color: Colors.light.textTertiary, textAlign: 'center', marginBottom: Spacing.xl, lineHeight: 22 },
-  emptyBtn: { backgroundColor: Colors.light.primary, paddingHorizontal: Spacing.xxl, paddingVertical: Spacing.lg, borderRadius: BorderRadius.full },
-  emptyBtnText: { color: '#fff', fontSize: FontSize.md, fontWeight: '700' },
-  list: { gap: Spacing.md },
-  docCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.light.surface, padding: Spacing.lg, borderRadius: BorderRadius.xl, borderWidth: 1, borderColor: Colors.light.border, gap: Spacing.md },
-  docIcon: { width: 48, height: 48, borderRadius: BorderRadius.lg, backgroundColor: Colors.light.background, alignItems: 'center', justifyContent: 'center' },
-  docInfo: { flex: 1 },
-  docName: { fontSize: FontSize.md, fontWeight: '600', color: Colors.light.text, marginBottom: 4 },
-  docDate: { fontSize: FontSize.sm, color: Colors.light.textTertiary },
-  deleteBtn: { padding: Spacing.sm },
-});

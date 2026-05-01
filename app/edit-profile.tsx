@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors, Spacing, BorderRadius, FontSize } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { supabase } from '@/lib/supabase';
+import { Card } from '@/components/Card';
 
 export default function EditProfileScreen() {
   const router = useRouter();
@@ -69,102 +69,80 @@ export default function EditProfileScreen() {
     }
   };
 
+  const Field = ({ label, value, onChangeText, placeholder, keyboardType = 'default', multiline = false, editable = true }: any) => (
+    <View className="mb-5">
+      <Text className="text-sm font-outfit-sb text-foreground/80 mb-2 ml-1">{label}</Text>
+      <TextInput 
+        className={`bg-white border border-border rounded-xl px-4 ${multiline ? 'py-4 min-h-[100px]' : 'py-3.5'} text-base font-work-sans text-foreground shadow-sm ${!editable ? 'opacity-60 bg-muted/50' : ''}`}
+        value={value} 
+        onChangeText={onChangeText} 
+        placeholder={placeholder} 
+        placeholderTextColor="#0C4A6E80"
+        keyboardType={keyboardType}
+        multiline={multiline}
+        textAlignVertical={multiline ? 'top' : 'center'}
+        editable={editable}
+      />
+    </View>
+  );
+
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.navBar}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} disabled={saving}>
-          <IconSymbol name="arrow.left" size={20} color={Colors.light.text} />
+    <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+      {/* Navigation Bar */}
+      <View className="flex-row items-center justify-between px-6 py-4">
+        <TouchableOpacity 
+          className="w-10 h-10 rounded-full bg-white border border-border items-center justify-center shadow-sm" 
+          onPress={() => router.back()} 
+          disabled={saving}
+        >
+          <IconSymbol name="arrow.left" size={20} color="#0C4A6E" />
         </TouchableOpacity>
-        <Text style={styles.navTitle}>Edit Profile</Text>
+        <Text className="text-lg font-outfit-b text-foreground">Edit Profile</Text>
         <TouchableOpacity onPress={handleSave} disabled={saving}>
           {saving ? (
-            <ActivityIndicator size="small" color={Colors.light.primary} />
+            <ActivityIndicator size="small" color="#0369A1" />
           ) : (
-            <Text style={styles.saveBtn}>Save</Text>
+            <Text className="text-base font-outfit-b text-primary">Save</Text>
           )}
         </TouchableOpacity>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-        {/* Avatar */}
-        <View style={styles.avatarSection}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{initials}</Text>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 24, paddingBottom: 100 }}>
+          {/* Avatar Section */}
+          <View className="items-center py-6 mb-4">
+            <View className="w-24 h-24 rounded-full bg-primary items-center justify-center shadow-sm border-4 border-white">
+              <Text className="text-3xl font-outfit-b text-white uppercase">{initials}</Text>
+            </View>
+            <TouchableOpacity className="mt-4 px-4 py-2 bg-primary/10 rounded-full">
+              <Text className="text-sm font-outfit-b text-primary">Change Photo</Text>
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity style={styles.changePhotoBtn}>
-            <Text style={styles.changePhotoText}>Change Photo</Text>
-          </TouchableOpacity>
-        </View>
 
-        {/* Form Fields */}
-        <View style={styles.fieldGroup}>
-          <Text style={styles.fieldLabel}>Full Name</Text>
-          <TextInput style={styles.input} value={fullName} onChangeText={setFullName} placeholder="John Doe" placeholderTextColor={Colors.light.textTertiary} />
-        </View>
+          {/* Form Fields */}
+          <Card className="p-6 mb-6">
+            <Text className="text-lg font-outfit-b text-foreground mb-6">Personal Details</Text>
+            <Field label="Full Name" value={fullName} onChangeText={setFullName} placeholder="John Doe" />
+            <Field label="Email" value={user?.email || ''} placeholder="Email" editable={false} />
+            <Field label="Phone" value={phone} onChangeText={setPhone} placeholder="+1 (555) 000-0000" keyboardType="phone-pad" />
+            <Field label="Country" value={country} onChangeText={setCountry} placeholder="e.g. United States" />
+          </Card>
 
-        <View style={styles.fieldGroup}>
-          <Text style={styles.fieldLabel}>Email</Text>
-          <TextInput style={[styles.input, { opacity: 0.6 }]} value={user?.email || ''} editable={false} placeholderTextColor={Colors.light.textTertiary} />
-        </View>
+          <Card className="p-6 mb-6">
+            <Text className="text-lg font-outfit-b text-foreground mb-6">Education</Text>
+            <Field label="University" value={university} onChangeText={setUniversity} placeholder="e.g. University of Texas" />
+            <Field label="Degree" value={degree} onChangeText={setDegree} placeholder="e.g. B.S. Petroleum Engineering" />
+            <Field label="Graduation Year" value={graduationYear} onChangeText={setGraduationYear} placeholder="e.g. 2026" keyboardType="numeric" />
+          </Card>
 
-        <View style={styles.fieldGroup}>
-          <Text style={styles.fieldLabel}>Phone</Text>
-          <TextInput style={styles.input} value={phone} onChangeText={setPhone} placeholder="+1 (555) 000-0000" keyboardType="phone-pad" placeholderTextColor={Colors.light.textTertiary} />
-        </View>
-
-        <View style={styles.fieldGroup}>
-          <Text style={styles.fieldLabel}>Country</Text>
-          <TextInput style={styles.input} value={country} onChangeText={setCountry} placeholder="e.g. United States" placeholderTextColor={Colors.light.textTertiary} />
-        </View>
-
-        <View style={styles.fieldGroup}>
-          <Text style={styles.fieldLabel}>University</Text>
-          <TextInput style={styles.input} value={university} onChangeText={setUniversity} placeholder="e.g. University of Texas" placeholderTextColor={Colors.light.textTertiary} />
-        </View>
-
-        <View style={styles.fieldGroup}>
-          <Text style={styles.fieldLabel}>Degree</Text>
-          <TextInput style={styles.input} value={degree} onChangeText={setDegree} placeholder="e.g. B.S. Petroleum Engineering" placeholderTextColor={Colors.light.textTertiary} />
-        </View>
-
-        <View style={styles.fieldGroup}>
-          <Text style={styles.fieldLabel}>Graduation Year</Text>
-          <TextInput style={styles.input} value={graduationYear} onChangeText={setGraduationYear} placeholder="e.g. 2026" keyboardType="numeric" maxLength={4} placeholderTextColor={Colors.light.textTertiary} />
-        </View>
-
-        <View style={styles.fieldGroup}>
-          <Text style={styles.fieldLabel}>Bio</Text>
-          <TextInput style={[styles.input, styles.textArea]} value={bio} onChangeText={setBio} placeholder="Tell employers about yourself..." multiline numberOfLines={4} placeholderTextColor={Colors.light.textTertiary} />
-        </View>
-
-        <View style={styles.fieldGroup}>
-          <Text style={styles.fieldLabel}>LinkedIn URL</Text>
-          <TextInput style={styles.input} value={linkedinUrl} onChangeText={setLinkedinUrl} placeholder="https://linkedin.com/in/yourname" autoCapitalize="none" placeholderTextColor={Colors.light.textTertiary} />
-        </View>
-
-        <View style={[styles.fieldGroup, { marginBottom: 40 }]}>
-          <Text style={styles.fieldLabel}>Skills (comma separated)</Text>
-          <TextInput style={[styles.input, styles.textArea]} value={skillsText} onChangeText={setSkillsText} placeholder="e.g. Drilling, Reservoir Engineering, Python" multiline placeholderTextColor={Colors.light.textTertiary} />
-        </View>
-      </ScrollView>
+          <Card className="p-6 mb-6">
+            <Text className="text-lg font-outfit-b text-foreground mb-6">Professional</Text>
+            <Field label="Bio" value={bio} onChangeText={setBio} placeholder="Tell employers about yourself..." multiline={true} />
+            <Field label="LinkedIn URL" value={linkedinUrl} onChangeText={setLinkedinUrl} placeholder="https://linkedin.com/in/yourname" />
+            <Field label="Skills (comma separated)" value={skillsText} onChangeText={setSkillsText} placeholder="e.g. Drilling, Reservoir Engineering, Python" multiline={true} />
+          </Card>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.light.background },
-  navBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md },
-  backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: Colors.light.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.light.border },
-  navTitle: { fontSize: FontSize.lg, fontWeight: '700', color: Colors.light.text },
-  saveBtn: { fontSize: FontSize.md, fontWeight: '700', color: Colors.light.primary },
-  content: { paddingHorizontal: Spacing.xl },
-  avatarSection: { alignItems: 'center', paddingVertical: Spacing.xxl },
-  avatar: { width: 80, height: 80, borderRadius: 40, backgroundColor: Colors.light.primary, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontSize: FontSize.xxl, fontWeight: '800', color: '#fff', textTransform: 'uppercase' },
-  changePhotoBtn: { marginTop: Spacing.md },
-  changePhotoText: { fontSize: FontSize.md, color: Colors.light.primary, fontWeight: '600' },
-  fieldGroup: { marginBottom: Spacing.lg },
-  fieldLabel: { fontSize: FontSize.sm, fontWeight: '600', color: Colors.light.textSecondary, marginBottom: Spacing.sm },
-  input: { backgroundColor: Colors.light.surface, borderWidth: 1, borderColor: Colors.light.border, borderRadius: BorderRadius.lg, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, fontSize: FontSize.md, color: Colors.light.text },
-  textArea: { minHeight: 100, textAlignVertical: 'top', paddingTop: Spacing.md },
-});

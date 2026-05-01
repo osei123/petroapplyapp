@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Colors, Spacing, BorderRadius, FontSize } from '@/constants/theme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
 export default function OnboardingStep1() {
@@ -22,37 +21,37 @@ export default function OnboardingStep1() {
   };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
-      <View style={styles.content}>
-        <View style={styles.header}>
-          <Text style={styles.stepText}>Step 1 of 3</Text>
-          <Text style={styles.title}>Welcome Abroad!</Text>
-          <Text style={styles.subtitle}>Let's start with your basic information.</Text>
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1 bg-background">
+      <View className="flex-1 px-6 justify-center">
+        <View className="mb-10">
+          <Text className="text-sm font-outfit-b text-primary uppercase tracking-widest mb-2">Step 1 of 3</Text>
+          <Text className="text-3xl font-outfit-b text-foreground mb-2">Welcome Abroad!</Text>
+          <Text className="text-base font-work-sans text-foreground/70">Let's start with your basic information.</Text>
         </View>
 
-        <View style={styles.form}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Full Name</Text>
-            <View style={styles.inputContainer}>
-              <IconSymbol name="person.fill" size={20} color={Colors.light.textTertiary} style={styles.icon} />
+        <View className="gap-6">
+          <View className="gap-2">
+            <Text className="text-sm font-outfit-sb text-foreground/80 ml-1">Full Name</Text>
+            <View className="flex-row items-center bg-white border-2 border-border rounded-xl px-4 py-3.5 shadow-sm">
+              <IconSymbol name="person.fill" size={20} color="#0C4A6E80" className="mr-3" />
               <TextInput
-                style={styles.input}
+                className="flex-1 text-base font-work-sans text-foreground"
                 placeholder="John Doe"
-                placeholderTextColor={Colors.light.textTertiary}
+                placeholderTextColor="#0C4A6E80"
                 value={fullName}
                 onChangeText={setFullName}
               />
             </View>
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Phone Number</Text>
-            <View style={styles.inputContainer}>
-              <IconSymbol name="phone.fill" size={20} color={Colors.light.textTertiary} style={styles.icon} />
+          <View className="gap-2">
+            <Text className="text-sm font-outfit-sb text-foreground/80 ml-1">Phone Number</Text>
+            <View className="flex-row items-center bg-white border-2 border-border rounded-xl px-4 py-3.5 shadow-sm">
+              <IconSymbol name="phone.fill" size={20} color="#0C4A6E80" className="mr-3" />
               <TextInput
-                style={styles.input}
+                className="flex-1 text-base font-work-sans text-foreground"
                 placeholder="+1 (555) 000-0000"
-                placeholderTextColor={Colors.light.textTertiary}
+                placeholderTextColor="#0C4A6E80"
                 value={phone}
                 onChangeText={setPhone}
                 keyboardType="phone-pad"
@@ -60,8 +59,11 @@ export default function OnboardingStep1() {
             </View>
           </View>
 
-          <TouchableOpacity style={styles.button} onPress={handleNext}>
-            <Text style={styles.buttonText}>Continue</Text>
+          <TouchableOpacity 
+            className="flex-row bg-primary py-4 rounded-xl items-center justify-center mt-4 gap-2 shadow-sm" 
+            onPress={handleNext}
+          >
+            <Text className="text-white text-base font-outfit-b">Continue</Text>
             <IconSymbol name="chevron.right" size={20} color="#fff" />
           </TouchableOpacity>
         </View>
@@ -69,20 +71,3 @@ export default function OnboardingStep1() {
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.light.background },
-  content: { flex: 1, padding: Spacing.xl, justifyContent: 'center' },
-  header: { marginBottom: Spacing.xxl },
-  stepText: { fontSize: FontSize.sm, fontWeight: '700', color: Colors.light.primary, textTransform: 'uppercase', marginBottom: Spacing.xs, letterSpacing: 1 },
-  title: { fontSize: FontSize.xxl, fontWeight: '800', color: Colors.light.text, marginBottom: Spacing.xs },
-  subtitle: { fontSize: FontSize.md, color: Colors.light.textSecondary },
-  form: { gap: Spacing.xl },
-  inputGroup: { gap: Spacing.sm },
-  label: { fontSize: FontSize.sm, fontWeight: '600', color: Colors.light.textSecondary, marginLeft: Spacing.xs },
-  inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.light.surface, borderWidth: 1, borderColor: Colors.light.border, borderRadius: BorderRadius.lg, paddingHorizontal: Spacing.md },
-  icon: { marginRight: Spacing.sm },
-  input: { flex: 1, paddingVertical: Spacing.md, fontSize: FontSize.md, color: Colors.light.text },
-  button: { flexDirection: 'row', backgroundColor: Colors.light.primary, padding: Spacing.lg, borderRadius: BorderRadius.lg, alignItems: 'center', justifyContent: 'center', marginTop: Spacing.md, gap: Spacing.sm },
-  buttonText: { color: '#fff', fontSize: FontSize.md, fontWeight: 'bold' },
-});

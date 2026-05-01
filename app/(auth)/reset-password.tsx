@@ -1,14 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
-import { Colors, Spacing, BorderRadius, FontSize } from '@/constants/theme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
   
-  // States: 'email' -> 'otp' -> 'new_password'
   const [step, setStep] = useState<'email' | 'otp' | 'new_password'>('email');
   const [loading, setLoading] = useState(false);
   
@@ -16,7 +14,6 @@ export default function ResetPasswordScreen() {
   const [token, setToken] = useState('');
   const [newPassword, setNewPassword] = useState('');
 
-  // Step 1: Request OTP
   async function requestReset() {
     if (!email) {
       Alert.alert('Validation Error', 'Please enter your account email.');
@@ -36,7 +33,6 @@ export default function ResetPasswordScreen() {
     setLoading(false);
   }
 
-  // Step 2: Verify OTP
   async function verifyCode() {
     if (!token || token.length < 8) {
       Alert.alert('Validation Error', 'Please enter the 8-digit code sent to your email.');
@@ -53,7 +49,6 @@ export default function ResetPasswordScreen() {
     if (error) {
       Alert.alert('Verification Error', error.message);
     } else if (data.session) {
-      // Successfully authenticated via recovery code
       setStep('new_password');
     } else {
       Alert.alert('Error', 'Invalid or expired code.');
@@ -62,7 +57,6 @@ export default function ResetPasswordScreen() {
     setLoading(false);
   }
 
-  // Step 3: Update Password
   async function updatePassword() {
     if (!newPassword || newPassword.length < 6) {
       Alert.alert('Validation Error', 'Password must be at least 6 characters.');
@@ -71,7 +65,6 @@ export default function ResetPasswordScreen() {
     
     setLoading(true);
 
-    // Because verifyOtp (type: recovery) logs the user in, we can update their password
     const { error } = await supabase.auth.updateUser({
       password: newPassword
     });
@@ -88,36 +81,40 @@ export default function ResetPasswordScreen() {
   }
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
-      <View style={styles.navBar}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => {
-          if (step !== 'email') setStep('email');
-          else router.back();
-        }}>
-          <IconSymbol name="arrow.left" size={20} color={Colors.light.text} />
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1 bg-background">
+      <View className="flex-row items-center px-6 pt-6 pb-2">
+        <TouchableOpacity 
+          className="w-10 h-10 rounded-full bg-white border border-border items-center justify-center shadow-sm" 
+          onPress={() => {
+            if (step !== 'email') setStep('email');
+            else router.back();
+          }}
+        >
+          <IconSymbol name="arrow.left" size={20} color="#0C4A6E" />
         </TouchableOpacity>
       </View>
-      <View style={styles.content}>
-        <View style={styles.header}>
-          <View style={styles.logoContainer}>
+      
+      <View className="flex-1 justify-center px-6 pb-16">
+        <View className="items-center mb-10">
+          <View className="w-16 h-16 rounded-2xl bg-primary items-center justify-center mb-6 shadow-sm">
             <IconSymbol name="lock.fill" size={32} color="#fff" />
           </View>
-          <Text style={styles.title}>Reset Password</Text>
-          <Text style={styles.subtitle}>
+          <Text className="text-3xl font-outfit-b text-foreground mb-2">Reset Password</Text>
+          <Text className="text-base font-work-sans text-foreground/70 text-center px-4">
             {step === 'email' && 'Enter your email to receive a reset code'}
             {step === 'otp' && `Enter the 8-digit code sent to ${email}`}
             {step === 'new_password' && 'Enter your new secure password'}
           </Text>
         </View>
 
-        <View style={styles.form}>
+        <View className="gap-5">
           {step === 'email' && (
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Email Address</Text>
+            <View className="gap-2">
+              <Text className="text-sm font-outfit-sb text-foreground/80 ml-1">Email Address</Text>
               <TextInput
-                style={styles.input}
+                className="bg-white border-2 border-border rounded-xl px-4 py-3.5 text-base font-work-sans text-foreground shadow-sm"
                 placeholder="student@university.edu"
-                placeholderTextColor={Colors.light.textTertiary}
+                placeholderTextColor="#0C4A6E80"
                 value={email}
                 onChangeText={setEmail}
                 autoCapitalize="none"
@@ -127,12 +124,12 @@ export default function ResetPasswordScreen() {
           )}
 
           {step === 'otp' && (
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>8-Digit Recovery Code</Text>
+            <View className="gap-2">
+              <Text className="text-sm font-outfit-sb text-foreground/80 ml-1">8-Digit Recovery Code</Text>
               <TextInput
-                style={[styles.input, { letterSpacing: 8, textAlign: 'center', fontSize: FontSize.xl }]}
+                className="bg-white border-2 border-border rounded-xl px-4 py-3.5 text-xl font-outfit-b text-foreground tracking-[8px] text-center shadow-sm"
                 placeholder="00000000"
-                placeholderTextColor={Colors.light.textTertiary}
+                placeholderTextColor="#0C4A6E80"
                 value={token}
                 onChangeText={setToken}
                 keyboardType="number-pad"
@@ -142,12 +139,12 @@ export default function ResetPasswordScreen() {
           )}
 
           {step === 'new_password' && (
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>New Password</Text>
+            <View className="gap-2">
+              <Text className="text-sm font-outfit-sb text-foreground/80 ml-1">New Password</Text>
               <TextInput
-                style={styles.input}
+                className="bg-white border-2 border-border rounded-xl px-4 py-3.5 text-base font-work-sans text-foreground shadow-sm"
                 placeholder="••••••••"
-                placeholderTextColor={Colors.light.textTertiary}
+                placeholderTextColor="#0C4A6E80"
                 value={newPassword}
                 onChangeText={setNewPassword}
                 secureTextEntry
@@ -156,7 +153,7 @@ export default function ResetPasswordScreen() {
           )}
 
           <TouchableOpacity 
-            style={styles.button} 
+            className="bg-primary py-4 rounded-xl items-center mt-2 shadow-sm" 
             onPress={() => {
               if (step === 'email') requestReset();
               else if (step === 'otp') verifyCode();
@@ -165,7 +162,7 @@ export default function ResetPasswordScreen() {
             disabled={loading}
           >
             {loading ? <ActivityIndicator color="#fff" /> : (
-              <Text style={styles.buttonText}>
+              <Text className="text-white text-base font-outfit-b">
                 {step === 'email' && 'Send Reset Code'}
                 {step === 'otp' && 'Verify Code'}
                 {step === 'new_password' && 'Update Password'}
@@ -177,20 +174,3 @@ export default function ResetPasswordScreen() {
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.light.background },
-  navBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.xl, paddingTop: Spacing.xl },
-  backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: Colors.light.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.light.border },
-  content: { flex: 1, justifyContent: 'center', paddingHorizontal: Spacing.xl, paddingBottom: 60 },
-  header: { alignItems: 'center', marginBottom: Spacing.xxxl },
-  logoContainer: { width: 64, height: 64, borderRadius: 20, backgroundColor: Colors.light.primary, alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.lg },
-  title: { fontSize: FontSize.xxl, fontWeight: '800', color: Colors.light.text, marginBottom: Spacing.xs },
-  subtitle: { fontSize: FontSize.md, color: Colors.light.textSecondary, textAlign: 'center', paddingHorizontal: Spacing.lg },
-  form: { gap: Spacing.lg },
-  inputGroup: { gap: Spacing.xs },
-  label: { fontSize: FontSize.sm, fontWeight: '600', color: Colors.light.textSecondary, marginLeft: Spacing.xs },
-  input: { backgroundColor: Colors.light.surface, borderWidth: 1, borderColor: Colors.light.border, borderRadius: BorderRadius.lg, padding: Spacing.md, fontSize: FontSize.md, color: Colors.light.text },
-  button: { backgroundColor: Colors.light.primary, padding: Spacing.lg, borderRadius: BorderRadius.lg, alignItems: 'center', marginTop: Spacing.md },
-  buttonText: { color: '#fff', fontSize: FontSize.md, fontWeight: 'bold' },
-});

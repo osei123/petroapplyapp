@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors, Spacing, BorderRadius, FontSize } from '@/constants/theme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { supabase } from '@/lib/supabase';
 import { useFocusEffect } from '@react-navigation/native';
+import { Card } from '@/components/Card';
 
 const filters = ['All', 'Full-Time', 'Part-Time', 'Internship', 'Contract'];
 
@@ -55,21 +55,21 @@ export default function JobsScreen() {
   });
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView className="flex-1 bg-background" edges={['top']}>
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>Explore Jobs</Text>
-        <Text style={styles.subtitle}>{jobs.length} opportunities available</Text>
+      <View className="px-6 pt-6 pb-2">
+        <Text className="text-2xl font-outfit-b text-foreground">Explore Jobs</Text>
+        <Text className="text-sm font-work-sans text-foreground/70 mt-1">{jobs.length} opportunities available</Text>
       </View>
 
       {/* Search */}
-      <View style={styles.searchContainer}>
-        <View style={styles.searchBar}>
-          <IconSymbol name="magnifyingglass" size={18} color={Colors.light.textTertiary} />
+      <View className="px-6 mt-4">
+        <View className="flex-row items-center bg-white px-4 py-3.5 rounded-xl border-2 border-border shadow-sm gap-3">
+          <IconSymbol name="magnifyingglass" size={20} color="#0C4A6E80" />
           <TextInput
-            style={styles.searchInput}
+            className="flex-1 text-base font-work-sans text-foreground"
             placeholder="Search jobs, companies, locations..."
-            placeholderTextColor={Colors.light.textTertiary}
+            placeholderTextColor="#0C4A6E80"
             value={search}
             onChangeText={setSearch}
           />
@@ -77,15 +77,15 @@ export default function JobsScreen() {
       </View>
 
       {/* Filters */}
-      <View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtersScroll} contentContainerStyle={styles.filtersContainer}>
+      <View className="mt-4">
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 24, gap: 12 }}>
           {filters.map((f) => (
             <TouchableOpacity
               key={f}
               onPress={() => setActiveFilter(f)}
-              style={[styles.filterChip, activeFilter === f && styles.filterChipActive]}
+              className={`px-5 py-2 rounded-full border ${activeFilter === f ? 'bg-primary border-primary' : 'bg-white border-border shadow-sm'}`}
             >
-              <Text style={[styles.filterText, activeFilter === f && styles.filterTextActive]}>{f}</Text>
+              <Text className={`text-sm font-outfit-sb ${activeFilter === f ? 'text-white' : 'text-foreground/70'}`}>{f}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -93,56 +93,61 @@ export default function JobsScreen() {
 
       {/* Job List */}
       {loading ? (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color={Colors.light.primary} />
+        <View className="flex-1 justify-center items-center">
+          <ActivityIndicator size="large" color="#0369A1" />
         </View>
       ) : (
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.listContainer}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 24, gap: 16, paddingBottom: 100 }}>
           {filtered.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>No jobs found matching your criteria</Text>
+            <View className="items-center py-16">
+              <Text className="text-base font-work-sans text-foreground/50">No jobs found matching your criteria</Text>
             </View>
           ) : (
             filtered.map((job) => (
-              <TouchableOpacity key={job.id} style={styles.jobCard} onPress={() => router.push(`/job/${job.id}` as any)} activeOpacity={0.7}>
-                <View style={styles.jobCardTop}>
-                  <View style={styles.companyAvatar}>
-                    <Text style={styles.avatarText}>
-                      {job.companies?.name ? job.companies.name.substring(0, 2).toUpperCase() : 'CO'}
-                    </Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.jobTitle} numberOfLines={1}>{job.title}</Text>
-                    <Text style={styles.jobCompany}>{job.companies?.name || 'Unknown'}</Text>
-                  </View>
-                  {job.featured && (
-                    <View style={styles.featuredBadge}>
-                      <IconSymbol name="star.fill" size={10} color="#f59e0b" />
+              <TouchableOpacity key={job.id} onPress={() => router.push(`/job/${job.id}` as any)} activeOpacity={0.7}>
+                <Card className="p-5">
+                  <View className="flex-row items-center gap-4">
+                    <View className="w-12 h-12 rounded-xl bg-muted items-center justify-center">
+                      <Text className="text-base font-outfit-b text-foreground">
+                        {job.companies?.name ? job.companies.name.substring(0, 2).toUpperCase() : 'CO'}
+                      </Text>
                     </View>
-                  )}
-                </View>
+                    <View className="flex-1">
+                      <Text className="text-base font-outfit-sb text-foreground" numberOfLines={1}>{job.title}</Text>
+                      <Text className="text-sm font-work-sans text-foreground/70 mt-1">{job.companies?.name || 'Unknown'}</Text>
+                    </View>
+                    {job.featured && (
+                      <View className="w-8 h-8 rounded-full bg-[#fef3c7] items-center justify-center">
+                        <IconSymbol name="star.fill" size={12} color="#f59e0b" />
+                      </View>
+                    )}
+                  </View>
 
-                <View style={styles.jobMeta}>
-                  <View style={styles.metaItem}>
-                    <IconSymbol name="location.fill" size={13} color={Colors.light.textTertiary} />
-                    <Text style={styles.metaText}>{job.location || 'Remote'}</Text>
+                  <View className="flex-row gap-6 mt-4">
+                    <View className="flex-row items-center gap-1.5">
+                      <IconSymbol name="location.fill" size={14} color="#0C4A6E80" />
+                      <Text className="text-xs font-work-sans text-foreground/70">{job.location || 'Remote'}</Text>
+                    </View>
+                    <View className="flex-row items-center gap-1.5">
+                      <IconSymbol name="clock.fill" size={14} color="#0C4A6E80" />
+                      <Text className="text-xs font-work-sans text-foreground/70">
+                        {new Date(job.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                      </Text>
+                    </View>
                   </View>
-                  <View style={styles.metaItem}>
-                    <IconSymbol name="clock.fill" size={13} color={Colors.light.textTertiary} />
-                    <Text style={styles.metaText}>
-                      {new Date(job.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                    </Text>
-                  </View>
-                </View>
 
-                <View style={styles.jobFooter}>
-                  <View style={styles.tagsRow}>
-                    <View style={styles.tag}><Text style={styles.tagText}>{job.employment_type}</Text></View>
-                    <View style={styles.tag}><Text style={styles.tagText}>{job.remote_type}</Text></View>
-                    <View style={styles.tag}><Text style={styles.tagText}>{job.experience_level}</Text></View>
+                  <View className="flex-row justify-between items-center mt-5">
+                    <View className="flex-row gap-2 flex-wrap flex-1">
+                      <View className="bg-muted px-3 py-1.5 rounded-full">
+                        <Text className="text-xs font-work-sans-md text-foreground capitalize">{job.employment_type}</Text>
+                      </View>
+                      <View className="bg-muted px-3 py-1.5 rounded-full">
+                        <Text className="text-xs font-work-sans-md text-foreground capitalize">{job.remote_type}</Text>
+                      </View>
+                    </View>
+                    <Text className="text-base font-outfit-b text-primary">{job.salary_range || 'Competitive'}</Text>
                   </View>
-                  <Text style={styles.salary}>{job.salary_range || 'Competitive'}</Text>
-                </View>
+                </Card>
               </TouchableOpacity>
             ))
           )}
@@ -151,37 +156,3 @@ export default function JobsScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.light.background },
-  header: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.lg, paddingBottom: Spacing.sm },
-  title: { fontSize: FontSize.xl, fontWeight: '700', color: Colors.light.text },
-  subtitle: { fontSize: FontSize.sm, color: Colors.light.textSecondary, marginTop: 2 },
-  searchContainer: { paddingHorizontal: Spacing.xl, marginTop: Spacing.sm },
-  searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.light.surface, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, borderRadius: BorderRadius.xl, borderWidth: 1, borderColor: Colors.light.border, gap: Spacing.sm },
-  searchInput: { flex: 1, fontSize: FontSize.md, color: Colors.light.text },
-  filtersScroll: { marginTop: Spacing.md },
-  filtersContainer: { paddingHorizontal: Spacing.xl, gap: Spacing.sm },
-  filterChip: { paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm, borderRadius: BorderRadius.full, backgroundColor: Colors.light.surface, borderWidth: 1, borderColor: Colors.light.border },
-  filterChipActive: { backgroundColor: Colors.light.primary, borderColor: Colors.light.primary },
-  filterText: { fontSize: FontSize.sm, fontWeight: '600', color: Colors.light.textSecondary },
-  filterTextActive: { color: '#fff' },
-  listContainer: { padding: Spacing.xl, gap: Spacing.md, paddingBottom: 30 },
-  emptyState: { alignItems: 'center', paddingVertical: 60 },
-  emptyText: { fontSize: FontSize.md, color: Colors.light.textTertiary },
-  jobCard: { backgroundColor: Colors.light.surface, borderRadius: BorderRadius.xl, padding: Spacing.lg, borderWidth: 1, borderColor: Colors.light.border },
-  jobCardTop: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
-  companyAvatar: { width: 44, height: 44, borderRadius: BorderRadius.lg, backgroundColor: Colors.light.surfaceHover, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontSize: FontSize.sm, fontWeight: '700', color: Colors.light.textSecondary },
-  jobTitle: { fontSize: FontSize.md, fontWeight: '700', color: Colors.light.text },
-  jobCompany: { fontSize: FontSize.sm, color: Colors.light.textSecondary, marginTop: 1 },
-  featuredBadge: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#fef3c7', alignItems: 'center', justifyContent: 'center' },
-  jobMeta: { flexDirection: 'row', gap: Spacing.lg, marginTop: Spacing.md },
-  metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  metaText: { fontSize: FontSize.xs, color: Colors.light.textTertiary },
-  jobFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: Spacing.md },
-  tagsRow: { flexDirection: 'row', gap: Spacing.sm, flexWrap: 'wrap', flex: 1 },
-  tag: { backgroundColor: Colors.light.surfaceHover, paddingHorizontal: 10, paddingVertical: 4, borderRadius: BorderRadius.full },
-  tagText: { fontSize: FontSize.xs, color: Colors.light.textSecondary, textTransform: 'capitalize' },
-  salary: { fontSize: FontSize.md, fontWeight: '700', color: Colors.light.primary },
-});

@@ -1,8 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
-import { Colors, Spacing, BorderRadius, FontSize } from '@/constants/theme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
 const CODE_LENGTH = 8;
@@ -16,20 +15,17 @@ export default function ConfirmSignUpScreen() {
   const [countdown, setCountdown] = useState(60);
   const inputRefs = useRef<(TextInput | null)[]>([]);
 
-  // Countdown timer for resend
   useEffect(() => {
     if (countdown <= 0) return;
     const timer = setTimeout(() => setCountdown((c) => c - 1), 1000);
     return () => clearTimeout(timer);
   }, [countdown]);
 
-  // Auto-focus first input on mount
   useEffect(() => {
     setTimeout(() => inputRefs.current[0]?.focus(), 300);
   }, []);
 
   const handleChange = (text: string, index: number) => {
-    // Only allow digits
     const digit = text.replace(/[^0-9]/g, '');
     if (!digit && text !== '') return;
 
@@ -37,12 +33,10 @@ export default function ConfirmSignUpScreen() {
     newCode[index] = digit;
     setCode(newCode);
 
-    // Auto-advance to next input
     if (digit && index < CODE_LENGTH - 1) {
       inputRefs.current[index + 1]?.focus();
     }
 
-    // Auto-submit when all digits are entered
     if (digit && index === CODE_LENGTH - 1) {
       const fullCode = newCode.join('');
       if (fullCode.length === CODE_LENGTH) {
@@ -91,7 +85,6 @@ export default function ConfirmSignUpScreen() {
         setCode(Array(CODE_LENGTH).fill(''));
         inputRefs.current[0]?.focus();
       }
-      // On success, the auth state change in AuthContext will handle navigation
     } catch (err: any) {
       Alert.alert('Error', err.message || 'Something went wrong.');
     } finally {
@@ -121,36 +114,34 @@ export default function ConfirmSignUpScreen() {
   const fullCode = code.join('');
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
-      <View style={styles.content}>
-        {/* Back Button */}
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <IconSymbol name="arrow.left" size={20} color={Colors.light.text} />
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1 bg-background">
+      <View className="flex-1 justify-center px-6">
+        <TouchableOpacity 
+          className="absolute top-16 left-6 w-10 h-10 rounded-full bg-white border border-border items-center justify-center shadow-sm z-10" 
+          onPress={() => router.back()}
+        >
+          <IconSymbol name="arrow.left" size={20} color="#0C4A6E" />
         </TouchableOpacity>
 
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.iconContainer}>
+        <View className="items-center mb-10">
+          <View className="w-16 h-16 rounded-2xl bg-primary items-center justify-center mb-6 shadow-sm">
             <IconSymbol name="envelope.fill" size={32} color="#fff" />
           </View>
-          <Text style={styles.title}>Verify Your Email</Text>
-          <Text style={styles.subtitle}>
+          <Text className="text-3xl font-outfit-b text-foreground mb-2">Verify Your Email</Text>
+          <Text className="text-base font-work-sans text-foreground/70 text-center">
             We've sent a {CODE_LENGTH}-digit code to
           </Text>
-          <Text style={styles.emailText}>{email}</Text>
+          <Text className="text-base font-outfit-b text-primary mt-1">{email}</Text>
         </View>
 
-        {/* OTP Inputs */}
-        <View style={styles.codeContainer}>
+        <View className="flex-row justify-center gap-2 mb-10">
           {code.map((digit, index) => (
             <TextInput
               key={index}
               ref={(ref) => { inputRefs.current[index] = ref; }}
-              style={[
-                styles.codeInput,
-                digit ? styles.codeInputFilled : {},
-                loading ? { opacity: 0.5 } : {},
-              ]}
+              className={`w-10 h-12 rounded-lg text-center text-xl font-outfit-b border-2 ${
+                digit ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-white text-foreground'
+              } ${loading ? 'opacity-50' : ''}`}
               value={digit}
               onChangeText={(text) => {
                 if (text.length > 1) {
@@ -168,30 +159,28 @@ export default function ConfirmSignUpScreen() {
           ))}
         </View>
 
-        {/* Verify Button */}
         <TouchableOpacity
-          style={[styles.verifyBtn, fullCode.length < CODE_LENGTH && styles.verifyBtnDisabled]}
+          className={`bg-primary py-4 rounded-xl items-center shadow-sm ${fullCode.length < CODE_LENGTH ? 'opacity-50' : ''}`}
           onPress={() => verifyCode(fullCode)}
           disabled={loading || fullCode.length < CODE_LENGTH}
         >
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.verifyBtnText}>Verify & Continue</Text>
+            <Text className="text-white text-base font-outfit-b">Verify & Continue</Text>
           )}
         </TouchableOpacity>
 
-        {/* Resend */}
-        <View style={styles.resendContainer}>
-          <Text style={styles.resendLabel}>Didn't receive the code?</Text>
+        <View className="items-center mt-10 gap-2">
+          <Text className="text-sm font-work-sans text-foreground/60">Didn't receive the code?</Text>
           {countdown > 0 ? (
-            <Text style={styles.countdownText}>Resend in {countdown}s</Text>
+            <Text className="text-sm font-outfit-sb text-foreground/80">Resend in {countdown}s</Text>
           ) : (
             <TouchableOpacity onPress={resendCode} disabled={resending}>
               {resending ? (
-                <ActivityIndicator size="small" color={Colors.light.primary} />
+                <ActivityIndicator size="small" color="#0369A1" />
               ) : (
-                <Text style={styles.resendBtn}>Resend Code</Text>
+                <Text className="text-sm font-outfit-b text-primary">Resend Code</Text>
               )}
             </TouchableOpacity>
           )}
@@ -200,44 +189,3 @@ export default function ConfirmSignUpScreen() {
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.light.background },
-  content: { flex: 1, justifyContent: 'center', padding: Spacing.xl },
-  backBtn: {
-    position: 'absolute', top: 60, left: Spacing.xl,
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: Colors.light.surface, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: Colors.light.border, zIndex: 10,
-  },
-  header: { alignItems: 'center', marginBottom: Spacing.xxxl },
-  iconContainer: {
-    width: 64, height: 64, borderRadius: 20,
-    backgroundColor: Colors.light.primary,
-    alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.lg,
-  },
-  title: { fontSize: FontSize.xxl, fontWeight: '800', color: Colors.light.text, marginBottom: Spacing.xs },
-  subtitle: { fontSize: FontSize.md, color: Colors.light.textSecondary, textAlign: 'center' },
-  emailText: { fontSize: FontSize.md, fontWeight: '700', color: Colors.light.primary, marginTop: 4 },
-  codeContainer: {
-    flexDirection: 'row', justifyContent: 'center', gap: 8, marginBottom: Spacing.xxl,
-  },
-  codeInput: {
-    width: 40, height: 50, borderRadius: BorderRadius.lg,
-    backgroundColor: Colors.light.surface, borderWidth: 2, borderColor: Colors.light.border,
-    textAlign: 'center', fontSize: 22, fontWeight: '800', color: Colors.light.text,
-  },
-  codeInputFilled: {
-    borderColor: Colors.light.primary, backgroundColor: Colors.light.primaryLight,
-  },
-  verifyBtn: {
-    backgroundColor: Colors.light.primary, padding: Spacing.lg,
-    borderRadius: BorderRadius.lg, alignItems: 'center',
-  },
-  verifyBtnDisabled: { opacity: 0.5 },
-  verifyBtnText: { color: '#fff', fontSize: FontSize.md, fontWeight: 'bold' },
-  resendContainer: { alignItems: 'center', marginTop: Spacing.xxl, gap: Spacing.sm },
-  resendLabel: { fontSize: FontSize.sm, color: Colors.light.textTertiary },
-  countdownText: { fontSize: FontSize.sm, fontWeight: '600', color: Colors.light.textSecondary },
-  resendBtn: { fontSize: FontSize.sm, fontWeight: '700', color: Colors.light.primary },
-});
