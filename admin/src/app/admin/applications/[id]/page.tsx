@@ -1,14 +1,13 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import Link from "next/link";
-import { ArrowLeft, FileText, Download } from "lucide-react";
+import { ArrowLeft, FileText, Download, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { applications } from "@/lib/mock-data";
+import { supabase } from "@/lib/supabase/client";
 
 const statusBadgeVariant: Record<string, "default" | "secondary" | "destructive" | "success" | "warning" | "outline"> = {
   submitted: "secondary", under_review: "default", shortlisted: "warning", interview: "outline", rejected: "destructive", hired: "success",
@@ -18,7 +17,66 @@ const allStatuses = ["submitted", "under_review", "shortlisted", "interview", "r
 export default function ApplicationDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const app = applications.find((a) => a.id === params.id);
+  const [app, setApp] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  
+  const [status, setStatus] = useState("submitted");
+  const [adminNotes, setAdminNotes] = useState("");
+
+  const fetchApp = async () => {
+    const { data } = await supabase
+      .from("applications")
+      .select(`
+        *,
+        jobs (title, companies (name)),
+        user_profiles (full_name, email)
+      `)
+      .eq("id", params.id)
+      .single();
+
+    if (data) {
+      setApp({
+        id: data.id,
+        userName: data.user_profiles?.full_name || "Unknown",
+        userEmail: data.user_profiles?.email || "Unknown",
+        jobTitle: data.jobs?.title || "Unknown",
+        companyName: data.jobs?.companies?.name || "Unknown",
+        status: data.status,
+        appliedAt: new Date(data.applied_at).toLocaleString(),
+        coverLetter: data.cover_letter_text,
+        resumeUrl: data.resume_url,
+        adminNotes: data.admin_notes,
+      });
+      setStatus(data.status || "submitted");
+      setAdminNotes(data.admin_notes || "");
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchApp();
+  }, [params.id]);
+
+  const handleUpdate = async () => {
+    setSaving(true);
+    const { error } = await supabase
+      .from("applications")
+      .update({ status, admin_notes: adminNotes })
+      .eq("id", params.id);
+
+    setSaving(false);
+    if (error) {
+      alert("Failed to update application: " + error.message);
+    } else {
+      alert("Application updated successfully");
+      fetchApp();
+    }
+  };
+
+  if (loading) {
+    return <div className="flex justify-center py-20 text-slate-500">Loading application details...</div>;
+  }
 
   if (!app) {
     return (
@@ -40,7 +98,7 @@ export default function ApplicationDetailPage() {
           <div className="flex items-start justify-between flex-wrap gap-4">
             <div className="flex items-center gap-4">
               <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center text-lg font-bold text-slate-600">
-                {app.userName.split(" ").map((n: string) => n[0]).join("")}
+                {app.userName.split(" ").map((n: string) => n[0]).join("").substring(0, 2).toUpperCase()}
               </div>
               <div>
                 <h2 className="text-xl font-bold text-slate-900">{app.userName}</h2>
@@ -64,10 +122,6 @@ export default function ApplicationDetailPage() {
                 <p className="text-xs text-slate-400 uppercase tracking-wider">Applied On</p>
                 <p className="text-sm text-slate-700 mt-0.5">{app.appliedAt}</p>
               </div>
-              <div>
-                <p className="text-xs text-slate-400 uppercase tracking-wider">Last Updated</p>
-                <p className="text-sm text-slate-700 mt-0.5">{app.updatedAt}</p>
-              </div>
             </div>
             {app.coverLetter && (
               <div>
@@ -80,10 +134,12 @@ export default function ApplicationDetailPage() {
                 <p className="text-xs text-slate-400 uppercase tracking-wider mb-2">Resume</p>
                 <div className="flex items-center gap-3 bg-slate-50 rounded-xl p-4">
                   <FileText size={20} className="text-sky-500" />
-                  <span className="text-sm text-slate-700 flex-1">{app.resumeUrl.split("/").pop()}</span>
-                  <Button variant="ghost" size="sm" className="gap-1 text-sky-600">
-                    <Download size={14} /> Download
-                  </Button>
+                  <span className="text-sm text-slate-700 flex-1">{app.resumeUrl.split("/").pop() || "Resume File"}</span>
+                  <a href={app.resumeUrl} target="_blank" rel="noopener noreferrer">
+                    <Button variant="ghost" size="sm" className="gap-1 text-sky-600">
+                      <Download size={14} /> Download
+                    </Button>
+                  </a>
                 </div>
               </div>
             )}
@@ -101,7 +157,7 @@ export default function ApplicationDetailPage() {
           <CardContent className="space-y-4">
             <div>
               <Label>Change Status</Label>
-              <select defaultValue={app.status} className="flex h-11 w-full rounded-2xl border border-input bg-transparent px-4 py-2 text-sm shadow-sm mt-1.5">
+              <select value={status} onChange={(e) => setStatus(e.target.value)} className="flex h-11 w-full rounded-2xl border border-input bg-transparent px-4 py-2 text-sm shadow-sm mt-1.5">
                 {allStatuses.map((s) => (
                   <option key={s} value={s}>{s.replace("_", " ").replace(/\b\w/g, (l) => l.toUpperCase())}</option>
                 ))}
@@ -109,9 +165,12 @@ export default function ApplicationDetailPage() {
             </div>
             <div>
               <Label>Internal Notes</Label>
-              <textarea rows={4} defaultValue={app.adminNotes || ""} placeholder="Add internal notes..." className="flex w-full rounded-2xl border border-input bg-transparent px-4 py-3 text-sm shadow-sm mt-1.5 resize-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
+              <textarea rows={4} value={adminNotes} onChange={(e) => setAdminNotes(e.target.value)} placeholder="Add internal notes..." className="flex w-full rounded-2xl border border-input bg-transparent px-4 py-3 text-sm shadow-sm mt-1.5 resize-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
             </div>
-            <Button className="w-full">Update Application</Button>
+            <Button className="w-full" onClick={handleUpdate} disabled={saving}>
+              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Update Application
+            </Button>
           </CardContent>
         </Card>
       </div>
