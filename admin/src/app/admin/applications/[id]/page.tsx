@@ -30,7 +30,7 @@ export default function ApplicationDetailPage() {
       .select(`
         *,
         jobs (title, companies (name)),
-        user_profiles (full_name, email)
+        user_profiles (full_name, email, phone, country, graduation_year, degree, university, linkedin_url)
       `)
       .eq("id", params.id)
       .single();
@@ -40,6 +40,12 @@ export default function ApplicationDetailPage() {
         id: data.id,
         userName: data.user_profiles?.full_name || "Unknown",
         userEmail: data.user_profiles?.email || "Unknown",
+        userPhone: data.user_profiles?.phone || "N/A",
+        userCountry: data.user_profiles?.country || "N/A",
+        userGradYear: data.user_profiles?.graduation_year || "N/A",
+        userDegree: data.user_profiles?.degree || "N/A",
+        userUniversity: data.user_profiles?.university || "N/A",
+        userLinkedin: data.user_profiles?.linkedin_url || "",
         jobTitle: data.jobs?.title || "Unknown",
         companyName: data.jobs?.companies?.name || "Unknown",
         status: data.status,
@@ -133,80 +139,118 @@ export default function ApplicationDetailPage() {
       </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2">
-          <CardHeader><CardTitle className="text-base">Application Details</CardTitle></CardHeader>
-          <CardContent className="space-y-5">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-xs text-slate-400 uppercase tracking-wider">Applied On</p>
-                <p className="text-sm text-slate-700 mt-0.5">{app.appliedAt}</p>
-              </div>
-            </div>
-            {app.coverLetter && (
-              <div>
-                <p className="text-xs text-slate-400 uppercase tracking-wider mb-2">Cover Letter</p>
-                <div className="bg-slate-50 rounded-xl p-4 text-sm text-slate-600 leading-relaxed">{app.coverLetter}</div>
-              </div>
-            )}
-            {app.resumeUrl && (
-              <div>
-                <p className="text-xs text-slate-400 uppercase tracking-wider mb-2">Resume</p>
-                <div className="flex items-center gap-3 bg-slate-50 rounded-xl p-4">
-                  <FileText size={20} className="text-sky-500" />
-                  <span className="text-sm text-slate-700 flex-1">{app.resumeUrl.split("/").pop() || "Resume File"}</span>
-                  <div className="flex items-center gap-2">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="gap-1 text-sky-600"
-                      onClick={async () => {
-                        try {
-                          const { data, error } = await supabase.storage.from("resumes").createSignedUrl(app.resumeUrl, 60);
-                          if (error) throw error;
-                          if (data?.signedUrl) window.open(data.signedUrl, "_blank");
-                        } catch (err: any) {
-                          alert("Failed to view resume: " + err.message);
-                        }
-                      }}
-                    >
-                      <FileText size={14} /> View
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="gap-1 text-sky-600"
-                      onClick={async () => {
-                        try {
-                          const { data, error } = await supabase.storage.from("resumes").download(app.resumeUrl);
-                          if (error) throw error;
-                          const url = URL.createObjectURL(data);
-                          const a = document.createElement("a");
-                          a.href = url;
-                          const ext = app.resumeUrl.split(".").pop() || "pdf";
-                          a.download = `${app.userName} Resume.${ext}`;
-                          document.body.appendChild(a);
-                          a.click();
-                          document.body.removeChild(a);
-                          URL.revokeObjectURL(url);
-                        } catch (err: any) {
-                          alert("Failed to download resume: " + err.message);
-                        }
-                      }}
-                    >
-                      <Download size={14} /> Download
-                    </Button>
+        <div className="lg:col-span-2 space-y-6">
+          <Card>
+            <CardHeader><CardTitle className="text-base">Applicant Profile</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-slate-400 uppercase tracking-wider">Phone</p>
+                  <p className="text-sm text-slate-700 mt-0.5">{app.userPhone}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-400 uppercase tracking-wider">Country</p>
+                  <p className="text-sm text-slate-700 mt-0.5">{app.userCountry}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-400 uppercase tracking-wider">University / School</p>
+                  <p className="text-sm text-slate-700 mt-0.5">{app.userUniversity}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-400 uppercase tracking-wider">Program / Degree</p>
+                  <p className="text-sm text-slate-700 mt-0.5">{app.userDegree}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-400 uppercase tracking-wider">Graduation Year</p>
+                  <p className="text-sm text-slate-700 mt-0.5">{app.userGradYear}</p>
+                </div>
+                {app.userLinkedin && (
+                  <div>
+                    <p className="text-xs text-slate-400 uppercase tracking-wider">LinkedIn</p>
+                    <a href={app.userLinkedin} target="_blank" rel="noopener noreferrer" className="text-sm text-sky-600 mt-0.5 hover:underline block truncate">
+                      {app.userLinkedin}
+                    </a>
                   </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle className="text-base">Application Details</CardTitle></CardHeader>
+            <CardContent className="space-y-5">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-slate-400 uppercase tracking-wider">Applied On</p>
+                  <p className="text-sm text-slate-700 mt-0.5">{app.appliedAt}</p>
                 </div>
               </div>
-            )}
-            {app.adminNotes && (
-              <div>
-                <p className="text-xs text-slate-400 uppercase tracking-wider mb-2">Admin Notes</p>
-                <div className="bg-amber-50 rounded-xl p-4 text-sm text-amber-800">{app.adminNotes}</div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              {app.coverLetter && (
+                <div>
+                  <p className="text-xs text-slate-400 uppercase tracking-wider mb-2">Cover Letter</p>
+                  <div className="bg-slate-50 rounded-xl p-4 text-sm text-slate-600 leading-relaxed">{app.coverLetter}</div>
+                </div>
+              )}
+              {app.resumeUrl && (
+                <div>
+                  <p className="text-xs text-slate-400 uppercase tracking-wider mb-2">Resume</p>
+                  <div className="flex items-center gap-3 bg-slate-50 rounded-xl p-4">
+                    <FileText size={20} className="text-sky-500" />
+                    <span className="text-sm text-slate-700 flex-1">{app.resumeUrl.split("/").pop() || "Resume File"}</span>
+                    <div className="flex items-center gap-2">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="gap-1 text-sky-600"
+                        onClick={async () => {
+                          try {
+                            const { data, error } = await supabase.storage.from("resumes").createSignedUrl(app.resumeUrl, 60);
+                            if (error) throw error;
+                            if (data?.signedUrl) window.open(data.signedUrl, "_blank");
+                          } catch (err: any) {
+                            alert("Failed to view resume: " + err.message);
+                          }
+                        }}
+                      >
+                        <FileText size={14} /> View
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="gap-1 text-sky-600"
+                        onClick={async () => {
+                          try {
+                            const { data, error } = await supabase.storage.from("resumes").download(app.resumeUrl);
+                            if (error) throw error;
+                            const url = URL.createObjectURL(data);
+                            const a = document.createElement("a");
+                            a.href = url;
+                            const ext = app.resumeUrl.split(".").pop() || "pdf";
+                            a.download = `${app.userName} Resume.${ext}`;
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            URL.revokeObjectURL(url);
+                          } catch (err: any) {
+                            alert("Failed to download resume: " + err.message);
+                          }
+                        }}
+                      >
+                        <Download size={14} /> Download
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {app.adminNotes && (
+                <div>
+                  <p className="text-xs text-slate-400 uppercase tracking-wider mb-2">Admin Notes</p>
+                  <div className="bg-amber-50 rounded-xl p-4 text-sm text-amber-800">{app.adminNotes}</div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
 
         <Card>
           <CardHeader><CardTitle className="text-base">Update Status</CardTitle></CardHeader>
