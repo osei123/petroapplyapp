@@ -23,6 +23,7 @@ export default function ApplicationDetailScreen() {
   const router = useRouter();
   const [app, setApp] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [withdrawing, setWithdrawing] = useState(false);
 
   useEffect(() => {
     const fetchApplication = async () => {
@@ -50,6 +51,33 @@ export default function ApplicationDetailScreen() {
     };
     fetchApplication();
   }, [id]);
+
+  const handleWithdraw = () => {
+    Alert.alert(
+      "Withdraw Application",
+      "Are you sure you want to withdraw your application? This cannot be undone, but you can apply again.",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Withdraw", 
+          style: "destructive", 
+          onPress: async () => {
+            setWithdrawing(true);
+            try {
+              const { error } = await supabase.from('applications').delete().eq('id', id);
+              if (error) throw error;
+              Alert.alert("Success", "Your application has been withdrawn.");
+              router.back();
+            } catch (error: any) {
+              Alert.alert("Error", error.message);
+            } finally {
+              setWithdrawing(false);
+            }
+          } 
+        }
+      ]
+    );
+  };
 
   if (loading) {
     return (
@@ -168,6 +196,21 @@ export default function ApplicationDetailScreen() {
             <IconSymbol name="chevron.right" size={16} color="#0C4A6E80" />
           </TouchableOpacity>
         </Card>
+
+        {app.status === 'submitted' && (
+          <TouchableOpacity 
+            className="mt-6 bg-red-50 border border-red-100 p-4 rounded-xl items-center flex-row justify-center gap-2 shadow-sm"
+            onPress={handleWithdraw}
+            disabled={withdrawing}
+          >
+            {withdrawing ? <ActivityIndicator color="#ef4444" /> : (
+              <>
+                <IconSymbol name="trash.fill" size={18} color="#ef4444" />
+                <Text className="text-red-600 font-outfit-b text-base">Withdraw Application</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        )}
       </ScrollView>
     </SafeAreaView>
   );

@@ -74,6 +74,20 @@ export default function ApplicationDetailPage() {
     }
   };
 
+  const handleDelete = async () => {
+    if (window.confirm("Are you sure you want to delete this application? The applicant will be able to apply again. This action cannot be undone.")) {
+      setSaving(true);
+      const { error } = await supabase.from("applications").delete().eq("id", params.id);
+      setSaving(false);
+      if (error) {
+        alert("Failed to delete: " + error.message);
+      } else {
+        alert("Application deleted successfully.");
+        router.push("/admin/applications");
+      }
+    }
+  };
+
   if (loading) {
     return <div className="flex justify-center py-20 text-slate-500">Loading application details...</div>;
   }
@@ -89,9 +103,14 @@ export default function ApplicationDetailPage() {
 
   return (
     <div className="space-y-6 max-w-4xl">
-      <button onClick={() => router.back()} className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-900 transition-colors">
-        <ArrowLeft size={16} /> Back to Applications
-      </button>
+      <div className="flex items-center justify-between">
+        <button onClick={() => router.back()} className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-900 transition-colors">
+          <ArrowLeft size={16} /> Back to Applications
+        </button>
+        <Button variant="destructive" size="sm" onClick={handleDelete} disabled={saving}>
+          Delete Application
+        </Button>
+      </div>
 
       <Card>
         <CardContent className="p-6">
