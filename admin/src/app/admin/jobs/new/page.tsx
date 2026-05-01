@@ -30,6 +30,7 @@ export default function NewJobPage() {
     requirements: "",
     featured: false,
     status: "published",
+    external_url: "",
   });
 
   useEffect(() => {
@@ -83,6 +84,7 @@ export default function NewJobPage() {
         requirements: reqArray,
         featured: formData.featured,
         status: formData.status,
+        external_url: formData.external_url || null,
         posted_date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
       },
     ])
@@ -188,6 +190,12 @@ export default function NewJobPage() {
                   <option value="hybrid">Hybrid</option>
                 </select>
               </div>
+              {(formData.application_mode === 'external' || formData.application_mode === 'hybrid') && (
+                <div className="sm:col-span-2">
+                  <Label htmlFor="external_url">External Application URL *</Label>
+                  <Input id="external_url" value={formData.external_url} onChange={handleChange} placeholder="https://company.com/careers/apply" className="mt-1.5" />
+                </div>
+              )}
               <div>
                 <Label htmlFor="status">Status</Label>
                 <select id="status" value={formData.status} onChange={handleChange} className="flex h-11 w-full rounded-2xl border border-input bg-transparent px-4 py-2 text-sm shadow-sm mt-1.5">

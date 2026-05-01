@@ -130,6 +130,14 @@ export default function JobDetailPage() {
                 <p className="text-sm text-slate-700 capitalize mt-0.5">{item.value ? item.value.replace("-", " ").replace("_", " ") : "N/A"}</p>
               </div>
             ))}
+            {(job.application_mode === 'external' || job.application_mode === 'hybrid') && job.external_url && (
+              <div>
+                <p className="text-xs text-slate-400 uppercase tracking-wider">External URL</p>
+                <a href={job.external_url} target="_blank" rel="noopener noreferrer" className="text-sm text-sky-600 mt-0.5 flex items-center gap-1 hover:underline">
+                  {job.external_url} <ExternalLink size={12} />
+                </a>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

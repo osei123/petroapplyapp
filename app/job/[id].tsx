@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, Linking, Modal, TextInput } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Spacing, BorderRadius, FontSize } from '@/constants/theme';
@@ -17,6 +17,12 @@ export default function JobDetailScreen() {
   const [savingBookmark, setSavingBookmark] = useState(false);
   const [applying, setApplying] = useState(false);
   const [hasApplied, setHasApplied] = useState(false);
+
+  // Modal states
+  const [modalVisible, setModalVisible] = useState(false);
+  const [userDocs, setUserDocs] = useState<any[]>([]);
+  const [selectedResumeId, setSelectedResumeId] = useState<string | null>(null);
+  const [coverLetter, setCoverLetter] = useState("");
 
   useEffect(() => {
     async function fetchJob() {
@@ -91,16 +97,28 @@ export default function JobDetailScreen() {
     }
   };
 
-  const handleApply = async () => {
+  const handleApplyPress = async () => {
     if (!user || applying) return;
     if (hasApplied) {
       Alert.alert('Already Applied', 'You have already submitted an application for this job.');
       return;
     }
 
+    // Handle external application
+    if (job?.application_mode === 'external') {
+      if (job.external_url) {
+        Linking.openURL(job.external_url).catch(() => {
+          Alert.alert("Error", "Could not open external application link.");
+        });
+      } else {
+        Alert.alert("Error", "External link not provided by the company.");
+      }
+      return;
+    }
+
+    // Internal Application Setup
     setApplying(true);
     try {
-      // Fetch user's documents
       const { data: docs, error: docError } = await supabase
         .from('documents')
         .select('*')
@@ -122,41 +140,41 @@ export default function JobDetailScreen() {
         return;
       }
 
-      const latestResume = docs[0];
-
-      Alert.alert(
-        'Apply for this job?',
-        `Submit application to ${job?.companies?.name || 'this company'} using resume:\n"${latestResume.filename}"?`,
-        [
-          { text: 'Cancel', style: 'cancel', onPress: () => setApplying(false) },
-          {
-            text: 'Apply',
-            onPress: async () => {
-              try {
-                const { error } = await supabase
-                  .from('applications')
-                  .insert({
-                    user_id: user.id,
-                    job_id: id,
-                    status: 'submitted',
-                    resume_url: latestResume.file_url,
-                  });
-
-                if (error) throw error;
-                setHasApplied(true);
-                Alert.alert('Success!', 'Your application has been submitted successfully.');
-              } catch (err: any) {
-                Alert.alert('Error', err.message || 'Failed to submit application.');
-              } finally {
-                setApplying(false);
-              }
-            }
-          }
-        ]
-      );
+      setUserDocs(docs);
+      setSelectedResumeId(docs[0].id); // Default to latest
+      setApplying(false);
+      setModalVisible(true);
     } catch (err: any) {
       setApplying(false);
       Alert.alert('Error', 'Failed to fetch your resumes.');
+    }
+  };
+
+  const submitApplication = async () => {
+    if (!selectedResumeId) return;
+    setApplying(true);
+
+    const selectedResume = userDocs.find(d => d.id === selectedResumeId);
+
+    try {
+      const { error } = await supabase
+        .from('applications')
+        .insert({
+          user_id: user?.id,
+          job_id: id,
+          status: 'submitted',
+          resume_url: selectedResume.file_url,
+          cover_letter_text: coverLetter.trim() || null,
+        });
+
+      if (error) throw error;
+      setHasApplied(true);
+      setModalVisible(false);
+      Alert.alert('Success!', 'Your application has been submitted successfully.');
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to submit application.');
+    } finally {
+      setApplying(false);
     }
   };
 
@@ -289,16 +307,81 @@ export default function JobDetailScreen() {
         <TouchableOpacity
           style={[styles.applyBtn, hasApplied && { backgroundColor: Colors.light.success }]}
           activeOpacity={0.8}
-          onPress={handleApply}
+          onPress={handleApplyPress}
           disabled={applying || hasApplied}
         >
           {applying ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.applyBtnText}>{hasApplied ? '✓ Applied' : 'Apply Now'}</Text>
+            <Text style={styles.applyBtnText}>
+              {hasApplied ? '✓ Applied' : (job.application_mode === 'external' ? 'Apply on Website' : 'Apply Now')}
+            </Text>
           )}
         </TouchableOpacity>
       </View>
+
+      {/* Application Modal */}
+      <Modal
+        visible={modalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Submit Application</Text>
+              <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.modalCloseBtn}>
+                <IconSymbol name="xmark" size={20} color={Colors.light.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView showsVerticalScrollIndicator={false} style={styles.modalScroll}>
+              <Text style={styles.modalSubtitle}>Applying for: {job.title}</Text>
+
+              <Text style={styles.inputLabel}>Select Resume *</Text>
+              <View style={styles.resumeList}>
+                {userDocs.map(doc => (
+                  <TouchableOpacity 
+                    key={doc.id} 
+                    style={[styles.resumeItem, selectedResumeId === doc.id && styles.resumeItemSelected]}
+                    onPress={() => setSelectedResumeId(doc.id)}
+                  >
+                    <IconSymbol name="doc.text.fill" size={20} color={selectedResumeId === doc.id ? Colors.light.primary : Colors.light.textTertiary} />
+                    <Text style={[styles.resumeItemText, selectedResumeId === doc.id && styles.resumeItemTextSelected]} numberOfLines={1}>
+                      {doc.filename}
+                    </Text>
+                    {selectedResumeId === doc.id && (
+                      <IconSymbol name="checkmark.circle.fill" size={20} color={Colors.light.primary} />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <Text style={styles.inputLabel}>Cover Letter (Optional)</Text>
+              <TextInput
+                style={styles.coverLetterInput}
+                placeholder="Write a brief cover letter or introduction..."
+                placeholderTextColor={Colors.light.textTertiary}
+                multiline
+                numberOfLines={6}
+                textAlignVertical="top"
+                value={coverLetter}
+                onChangeText={setCoverLetter}
+              />
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setModalVisible(false)}>
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.modalSubmitBtn} onPress={submitApplication} disabled={applying}>
+                {applying ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.modalSubmitText}>Submit</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -336,4 +419,25 @@ const styles = StyleSheet.create({
   bottomBar: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: Colors.light.surface, padding: Spacing.xl, paddingBottom: 36, borderTopWidth: 1, borderTopColor: Colors.light.border },
   applyBtn: { backgroundColor: Colors.light.primary, borderRadius: BorderRadius.xl, paddingVertical: Spacing.lg, alignItems: 'center' },
   applyBtnText: { fontSize: FontSize.md, fontWeight: '700', color: '#fff' },
+  
+  // Modal Styles
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: Colors.light.background, borderTopLeftRadius: BorderRadius.xxl, borderTopRightRadius: BorderRadius.xxl, maxHeight: '80%', paddingBottom: 40 },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: Spacing.xl, borderBottomWidth: 1, borderBottomColor: Colors.light.border },
+  modalTitle: { fontSize: FontSize.lg, fontWeight: '700', color: Colors.light.text },
+  modalCloseBtn: { padding: Spacing.xs },
+  modalScroll: { padding: Spacing.xl },
+  modalSubtitle: { fontSize: FontSize.md, color: Colors.light.textSecondary, marginBottom: Spacing.xl },
+  inputLabel: { fontSize: FontSize.sm, fontWeight: '600', color: Colors.light.text, marginBottom: Spacing.sm },
+  resumeList: { marginBottom: Spacing.xl, gap: Spacing.sm },
+  resumeItem: { flexDirection: 'row', alignItems: 'center', padding: Spacing.md, borderRadius: BorderRadius.lg, borderWidth: 1, borderColor: Colors.light.border, backgroundColor: Colors.light.surface },
+  resumeItemSelected: { borderColor: Colors.light.primary, backgroundColor: Colors.light.primaryLight },
+  resumeItemText: { flex: 1, fontSize: FontSize.sm, color: Colors.light.textSecondary, marginHorizontal: Spacing.sm },
+  resumeItemTextSelected: { color: Colors.light.primaryDark, fontWeight: '600' },
+  coverLetterInput: { backgroundColor: Colors.light.surface, borderWidth: 1, borderColor: Colors.light.border, borderRadius: BorderRadius.xl, padding: Spacing.md, fontSize: FontSize.md, color: Colors.light.text, minHeight: 120, marginBottom: Spacing.xxl },
+  modalFooter: { flexDirection: 'row', padding: Spacing.xl, gap: Spacing.md, borderTopWidth: 1, borderTopColor: Colors.light.border },
+  modalCancelBtn: { flex: 1, paddingVertical: Spacing.md, alignItems: 'center', justifyContent: 'center', borderRadius: BorderRadius.lg, backgroundColor: Colors.light.surface, borderWidth: 1, borderColor: Colors.light.border },
+  modalCancelText: { fontSize: FontSize.md, fontWeight: '600', color: Colors.light.textSecondary },
+  modalSubmitBtn: { flex: 1, paddingVertical: Spacing.md, alignItems: 'center', justifyContent: 'center', borderRadius: BorderRadius.lg, backgroundColor: Colors.light.primary },
+  modalSubmitText: { fontSize: FontSize.md, fontWeight: '700', color: '#fff' }
 });

@@ -45,6 +45,8 @@ export default function EditJobPage() {
       remote_type: formData.get("remote_type"),
       salary_range: formData.get("salary_range") || null,
       deadline: formData.get("deadline") || null,
+      application_mode: formData.get("application_mode"),
+      external_url: formData.get("external_url") || null,
       status: formData.get("status"),
       description: formData.get("description"),
       requirements: reqArray,
@@ -116,6 +118,18 @@ export default function EditJobPage() {
               <div>
                 <Label htmlFor="deadline">Deadline</Label>
                 <Input id="deadline" name="deadline" type="date" defaultValue={job.deadline || ""} className="mt-1.5" />
+              </div>
+              <div>
+                <Label htmlFor="application_mode">Application Mode</Label>
+                <select id="application_mode" name="application_mode" defaultValue={job.application_mode || "internal"} className="flex h-11 w-full rounded-2xl border border-input bg-transparent px-4 py-2 text-sm shadow-sm mt-1.5">
+                  <option value="internal">Internal</option>
+                  <option value="external">External</option>
+                  <option value="hybrid">Hybrid</option>
+                </select>
+              </div>
+              <div className="sm:col-span-2">
+                <Label htmlFor="external_url">External Application URL (if External/Hybrid)</Label>
+                <Input id="external_url" name="external_url" defaultValue={job.external_url || ""} placeholder="https://company.com/careers/apply" className="mt-1.5" />
               </div>
               <div>
                 <Label htmlFor="status">Status</Label>
