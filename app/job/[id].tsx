@@ -67,7 +67,15 @@ export default function JobDetailScreen() {
   }, [id, user]);
 
   const toggleSave = async () => {
-    if (!user || savingBookmark) return;
+    if (savingBookmark) return;
+    if (!user) {
+      Alert.alert('Sign In Required', 'Please sign in to save jobs.', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Sign In', onPress: () => router.push('/login' as any) }
+      ]);
+      return;
+    }
+    
     setSavingBookmark(true);
 
     try {
@@ -98,7 +106,15 @@ export default function JobDetailScreen() {
   };
 
   const handleApplyPress = async () => {
-    if (!user || applying) return;
+    if (applying) return;
+    if (!user) {
+      Alert.alert('Sign In Required', 'Please sign in to apply for jobs.', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Sign In', onPress: () => router.push('/login' as any) }
+      ]);
+      return;
+    }
+
     if (hasApplied) {
       Alert.alert('Already Applied', 'You have already submitted an application for this job.');
       return;
