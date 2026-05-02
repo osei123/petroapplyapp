@@ -30,6 +30,9 @@ const MAPPING = {
   'clock.fill': 'access-time',
   'arrow.left': 'arrow-back',
   'gear': 'settings',
+  'trash.fill': 'delete',
+  'checkmark.circle.fill': 'check-circle',
+  'xmark': 'close',
 } as IconMapping;
 
 /**
